@@ -10,8 +10,9 @@ from ..client import *
 
 class FPSEnv(gym.Env):
     def __init__(self, ):
-        self.set_env()
+        #self.set_env()
         #self.playerai()
+        pass
 
 
     def _step(self, action):
@@ -54,11 +55,14 @@ class FPSEnv(gym.Env):
         pass
 
 
-    def set_env(self, SEVERIP='127.0.0.1', SERVERPORT=5123, client_DEBUG=False, env_DEBUG=False, speedup=1):
+    def set_env(self, SEVERIP='127.0.0.1', SERVERPORT=5123, client_DEBUG=False, env_DEBUG=False, speedup=1,
+                        GESTUREPORT=None):
         '''
         配置env
         '''
-        self.client = Client(SEVERIP=SEVERIP, SERVERPORT=SERVERPORT,DEBUG=client_DEBUG)
+        self.client = Client(SEVERIP=SEVERIP, SERVERPORT=SERVERPORT, DEBUG=client_DEBUG)
+        if type(GESTUREPORT) == int:
+            self.client_gesture = Client(SEVERIP=SEVERIP, SERVERPORT=GESTUREPORT, DEBUG=client_DEBUG)
         self.units = dict()
         self.states = dict()
         self.episode_id = 0
@@ -78,6 +82,7 @@ class FPSEnv(gym.Env):
     def get_objid_list(self, name=1, pos=0): 
         '''
         获取所有人id  名字和坐标可选
+        return dict
         '''
         cmd = 'cmd=get_objid_list`name=%d`pos=%d' % (name, pos)
         self.client.send(cmd)
@@ -91,6 +96,8 @@ class FPSEnv(gym.Env):
         '''
         获取units所有状态 但不包括弹药数 敌我标记（暂时用team_id代替 -1为敌人 正数为我方）
         objid_list 为 'all' 或 list
+        值会保存在self.states中
+        return dict{id:dict{key:value}}
         '''
         self.team_member = dict()    
         if objid_list == 'all':
@@ -104,6 +111,8 @@ class FPSEnv(gym.Env):
 
         self.client.send('cmd=get_game_variable`objid_list=%s' % (objid_list))
         s = self.client.receive()
+        for key in self.states.keys():
+            self.states[key]['HEALTH'] = 0
         for ss in s.split('`')[1:]:
             unit_id, d = str2dict(ss)
             if int(unit_id) not in self.states.keys():
@@ -159,7 +168,6 @@ class FPSEnv(gym.Env):
         self.client.send(cmd)
         s = self.client.receive()
         return s
-
 
     def make_action(self, d):
         '''
@@ -236,6 +244,7 @@ class FPSEnv(gym.Env):
         cmd += "auth=%s`group=%s`pos=%s`ai=<action name='MoveToPosAct' destPos='%s' walkType='%s' reachDist='%d'%s/>"\
             % (auth, group, pos, list2str(destPos), walkType, reachDist, maxDoTimes)
         s = self.make_action(cmd)
+        return s
 
     def add_patrol_path(self, pos_list, objid, noteam=0, noleader=1):
         '''
@@ -361,6 +370,7 @@ class FPSEnv(gym.Env):
         '''
         return dict 附近敌人的objid:dis
         TODO mindis设置多少？
+        return dict{id:dist}
         '''
         #pos0 = self.states[0]['POSITION']
         enemy_nearby = dict()
@@ -399,16 +409,16 @@ class FPSEnv(gym.Env):
 
     def move_target(self, objid_list='all', target_id=0, team_id=1, walkType='run'):
         '''
-        向某个人集中, 默认为第一队向主角跑步集中
+        向某个人集中, 默认为第一队向主角跑步集中 
         '''
         return self.can_attack_move(objid_list, destObj=target_id, team_id=team_id, walkType=walkType)
 
 
-    def move_alert(self, team_id=1, capital_id=0, walkType='run', dist=4, dist2=6, reachDist=6):
+    def move_alert(self, team_id=1, capital_id=0, walkType='run', dist=4, dist2=6, reachDist=1):
         '''
-        警戒
+        警戒移动
         '''
-        env.get_game_variable()
+        self.get_game_variable()
         capital_pos = self.states[capital_id]['POSITION']
         #angle0 = (90 - self.states[capital_id]['ANGLE']) / 180 * np.pi
         delta_x = self.states[capital_id]['POSITION'][0] - self.states[capital_id]['LAST_POSITION'][0]
@@ -428,13 +438,13 @@ class FPSEnv(gym.Env):
             #print(uid, angle1/np.pi*180, capital_pos, destPos)
             self.move(destPos=destPos, objid_list=[uid], auth='top', group='group1', walkType=walkType, reachDist=reachDist)
 
-    def move_to_ahead(self, objid_list='all', team_id=1, capital_id=0, walkType='run', angle=None, dist=4, reachDist=3):
+    def move_to_ahead(self, objid_list='all', team_id=1, capital_id=0, walkType='run', angle=None, dist=4, reachDist=2):
         '''
         挡住某人
         angle为阻挡方向
         TODO怎么个挡法？
         '''
-        env.get_game_variable()
+        self.get_game_variable()
         capital_pos = self.states[capital_id]['POSITION']
         if angle == None:
             if capital_id in self.team_target.keys() and self.team_target[capital_id]['HEALTH'] > 0:

@@ -19,12 +19,13 @@ class DemoEnv(fps.FPSEnv):
     def _step(self, action):
         super(DemoEnv, self).get_game_variable()
         hp1, hp2, hp3, hp4 = 0, 0, 0, 0
-        self.target_mapid = [action//5, action%5]
         for uid, unit in self.states.items():
             if unit['TEAM_ID'] > 0:
                 hp1 += max(0, unit['HEALTH'])
             else:
                 hp2 += max(0, unit['HEALTH'])
+
+        self.target_mapid = [action // 5, action % 5]
         #self.map_move(team_id=1, target_map_pos=self.target_mapid)
         self.map_move(team_id=1, objid_list=[0], target_map_pos=self.target_mapid)
         is_new_frame, s = self.check_frame()
@@ -36,12 +37,12 @@ class DemoEnv(fps.FPSEnv):
                 #print(enemy_nearby_id)
                 for uid in self.team_member[1]:
                     target = random.choice(enemy_nearby_id)
-                    while self.states[target]['HEALTH']<=0:
+                    while self.states[target]['HEALTH'] <= 0:
                         target = random.choice(enemy_nearby_id)
                     #print(uid, target)
                     if uid not in self.attack_target.keys():
                         self.set_target_objid([uid], target)
-                    elif self.states[target]['HEALTH']<=0:
+                    elif self.states[target]['HEALTH'] <= 0:
                         self.set_target_objid([uid], target)
                     self.attack([uid])
             else:
