@@ -15,22 +15,24 @@ class DemoEnv3(fps.FPSEnv):
         super(DemoEnv3, self).__init__()
 
     def _step(self, action):
-        self.get_game_variable()
+        #self.get_game_variable()
         self.state = self.get_state1()
 
-        if action == 1:
+        if action == 1:#围一圈保护移动
             self.move_alert()
-        elif action == 2:
-            self.move_to_ahead()
-        elif action == 3:
-            self.attack()
-
+        elif action == 2:#人墙
+            self.move_to_ahead(angle=0)
+        elif action == 3:#自由攻击
+            self.origin_ai()
+        #    self.search_enemy_attack()
+        elif action == 4:#包围
+            self.attack_surround()
         return self.state, 0, self._check_done(), ''
 
     def _reset(self, ):
         self.new_episode()
         #self.playerai()
-        self.get_game_variable()
+        #self.get_game_variable()
         return self.get_state1()
 
     def _check_done(self):

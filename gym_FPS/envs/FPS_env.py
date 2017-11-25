@@ -1,7 +1,7 @@
 # coding: utf-8
 
 import numpy as np
-import math, random
+import math, random, threading
 import gym
 import time
 
@@ -61,6 +61,7 @@ class FPSEnv(gym.Env):
         配置env
         '''
         self.client = Client(SEVERIP=SEVERIP, SERVERPORT=SERVERPORT, DEBUG=client_DEBUG)
+        self.client2 = Client(SEVERIP=SEVERIP, SERVERPORT=SERVERPORT, DEBUG=client_DEBUG)
         if type(GESTUREPORT) == int:
             self.client_gesture = Client(SEVERIP=SEVERIP, SERVERPORT=GESTUREPORT, DEBUG=client_DEBUG)
         self.units = dict()
@@ -85,48 +86,50 @@ class FPSEnv(gym.Env):
         return dict
         '''
         cmd = 'cmd=get_objid_list`name=%d`pos=%d' % (name, pos)
-        self.client.send(cmd)
-        s = self.client.receive().split('`')
+        self.client2.send(cmd)
+        s = self.client2.receive().split('`')
         _, self.units = str2dict(s[1], left_type = 'int')
         if self.DEBUG:
             print(self.units)
         return self.units
 
-    def get_game_variable(self, objid_list='all'): 
+    def get_game_variable(self, ): 
         '''
         获取units所有状态 但不包括弹药数 敌我标记（暂时用team_id代替 -1为敌人 正数为我方）
         objid_list 为 'all' 或 list
         值会保存在self.states中
         return dict{id:dict{key:value}}
         '''
-        self.team_member = dict()    
-        if objid_list == 'all':
+        while True:
+            team_member = dict()   
             objid_list = get_simple_id_list(self.get_objid_list().keys())
-            #self.states = dict()
-        else:
-            objid_list = get_simple_id_list(objid_list)
 
-        for key in self.states.keys():
-            self.states[key]['LAST_POSITION'] = self.states[key]['POSITION']
+            states = self.states.copy()
+            for key in states.keys():
+                states[key]['LAST_POSITION'] = states[key]['POSITION']
 
-        self.client.send('cmd=get_game_variable`objid_list=%s' % (objid_list))
-        s = self.client.receive()
-        for key in self.states.keys():
-            self.states[key]['HEALTH'] = 0
-        for ss in s.split('`')[1:]:
-            unit_id, d = str2dict(ss)
-            if int(unit_id) not in self.states.keys():
-                self.states[int(unit_id)] = dict()
-            for key, value in d.items():
-                self.states[int(unit_id)][key] = value
-            #每个队有哪些人
-            tid = int(d['TEAM_ID'])
-            if tid not in self.team_member.keys():
-                self.team_member[tid] = []
-            self.team_member[tid].append(int(unit_id))
-        if self.DEBUG:
-            print(self.states)
-        return self.states
+            self.client2.send('cmd=get_game_variable`objid_list=%s' % (objid_list))
+            s = self.client2.receive()
+            for key in states.keys():
+                states[key]['HEALTH'] = 0
+            for ss in s.split('`')[1:]:
+                unit_id, d = str2dict(ss)
+                if int(unit_id) not in states.keys():
+                    states[int(unit_id)] = dict()
+                for key, value in d.items():
+                    states[int(unit_id)][key] = value
+                #每个队有哪些人
+                tid = int(d['TEAM_ID'])
+                if tid not in team_member.keys():
+                    team_member[tid] = []
+                team_member[tid].append(int(unit_id))
+
+            self.team_member = team_member
+            self.states = states.copy()
+            if self.DEBUG:
+                print(self.states)
+            time.sleep(0.1)
+        return #self.states
 
     def new_episode(self, save=1, replay_file=None, speedup=1):
         '''
@@ -145,7 +148,9 @@ class FPSEnv(gym.Env):
         s = self.client.receive()
         #self.playerai()
         time.sleep(1.0)
-        self.get_game_variable()
+        if self.episode_id == 1:
+            threading.Thread(target=self.get_game_variable).start()
+        #self.get_game_variable()
         #if s.find('success')==-1:
         #   self.reset()
         #   
@@ -224,12 +229,12 @@ class FPSEnv(gym.Env):
             raise
         return s.find('1') > -1
 
-    def move(self, destPos, objid_list='all', group='group1', auth='normal', pos='head', walkType='walk', reachDist=6, maxDoTimes=1, team_id=None, ):
+    def move(self, destPos, objid_list='all', group='group1', auth='normal', pos='head', walkType='walk', reachDist=6, maxDoTimes='', team_id=None, ):
         '''
         强行移动不受其他因素干扰 挨打不还手用于撤退 队形变换
         '''
         if type(objid_list) == int:
-            objid_list = [objid_list]
+            objid_list = list2str([objid_list])
         if objid_list == 'all':
             objid_list = get_simple_id_list(self.units.keys())
         else:
@@ -238,9 +243,12 @@ class FPSEnv(gym.Env):
         if team_id != None:
             cmd += 'team_id=%d`' % team_id
         if auth != 'top':
+            if maxDoTimes == '':
+                maxDoTimes = 1
             maxDoTimes = " maxDoTimes='%d'" % maxDoTimes
         else:
-            maxDoTimes = ''
+            if type(maxDoTimes) == int:
+                maxDoTimes = " maxDoTimes='%d'" % maxDoTimes
         cmd += "auth=%s`group=%s`pos=%s`ai=<action name='MoveToPosAct' destPos='%s' walkType='%s' reachDist='%d'%s/>"\
             % (auth, group, pos, list2str(destPos), walkType, reachDist, maxDoTimes)
         s = self.make_action(cmd)
@@ -283,7 +291,7 @@ class FPSEnv(gym.Env):
         是否到达目标点  dis为阈值 
         return dis=-1时返回距离 否则返回距离是否小于dis
         '''
-        p = self.get_game_variable(objid_list=[objid])[objid]['POSITION']
+        p = self.states[objid]['POSITION']
         d = math.pow(p[0] - target_pos[0], 2) + math.pow(p[2] - target_pos[2], 2)
         if self.DEBUG:
             print(d, d <= dis * dis)
@@ -300,12 +308,20 @@ class FPSEnv(gym.Env):
         s = self.client.receive()
         return s
 
-    def search_enemy_attack(self,):
+    def search_enemy_attack(self, objid_list='all',team_id=1,auth='normal',group='group1',pos='head'):
         '''
         搜索敌人并攻击 
-        搁置
+        搁置!!!!!!!!!!!!!!
         '''
-        cmd = "cmd=make_action`objid_list=0`team_id=1`auth=normal`group=group1`pos=head`ai=<check name='SearchEnemyAct'><action name='ShootAct'/></check>"
+        if type(objid_list) == int:
+            objid_list = list2str([objid_list])
+        elif objid_list == 'all':
+            objid_list = get_simple_id_list(self.units.keys())
+        else:
+            objid_list = list2str(objid_list)
+        cmd = "cmd=make_action`objid_list=%s`team_id=%d`auth=%s`group=%s`pos=%s`ai=<check name='CheckTimeChk' interval='0'><action name='ShootAct'/><action name='SearchEnemyAct'/><check/>" % \
+                (objid_list, team_id, auth, group, pos)
+        #print(cmd)
         self.client.send(cmd)
         s = self.client.receive()
         return s
@@ -322,7 +338,7 @@ class FPSEnv(gym.Env):
             print('need destPos, destObjid or destObj at least one')
             raise
         if type(objid_list) == int:
-            objid_list = [objid_list]
+            objid_list = list2str([objid_list])
         elif objid_list == 'all':
             objid_list = get_simple_id_list(self.units.keys())
         else:
@@ -372,7 +388,7 @@ class FPSEnv(gym.Env):
         TODO mindis设置多少？
         return dict{id:dist}
         '''
-        #pos0 = self.states[0]['POSITION']
+        #print(self.team_member)
         enemy_nearby = dict()
         for enemyid, enemy_unit in self.states.items():
             if enemy_unit['TEAM_ID'] > 0 or enemy_unit['HEALTH'] <= 0:
@@ -414,11 +430,11 @@ class FPSEnv(gym.Env):
         return self.can_attack_move(objid_list, destObj=target_id, team_id=team_id, walkType=walkType)
 
 
-    def move_alert(self, team_id=1, capital_id=0, walkType='run', dist=4, dist2=6, reachDist=1):
+    def move_alert(self, team_id=1, capital_id=0, auth='normal', group='group1', walkType='run', dist=4, dist2=6, reachDist=1):
         '''
         警戒移动
         '''
-        self.get_game_variable()
+        #self.get_game_variable()
         capital_pos = self.states[capital_id]['POSITION']
         #angle0 = (90 - self.states[capital_id]['ANGLE']) / 180 * np.pi
         delta_x = self.states[capital_id]['POSITION'][0] - self.states[capital_id]['LAST_POSITION'][0]
@@ -436,15 +452,15 @@ class FPSEnv(gym.Env):
             destPos = [capital_pos[0] + dist * np.cos(angle1) + dist2 * delta_x, -1, 
                         capital_pos[2] + dist * np.sin(angle1) + dist2 * delta_y]
             #print(uid, angle1/np.pi*180, capital_pos, destPos)
-            self.move(destPos=destPos, objid_list=[uid], auth='top', group='group1', walkType=walkType, reachDist=reachDist)
+            self.move(destPos=destPos, objid_list=[uid], auth=auth, group=group, pos='replace', walkType=walkType, reachDist=reachDist)
 
-    def move_to_ahead(self, objid_list='all', team_id=1, capital_id=0, walkType='run', angle=None, dist=4, reachDist=2):
+    def move_to_ahead(self, objid_list='all', team_id=1, capital_id=0, auth='normal',group='group1', walkType='run', angle=None, dist=4, reachDist=2):
         '''
         挡住某人
         angle为阻挡方向
         TODO怎么个挡法？
         '''
-        self.get_game_variable()
+        #self.get_game_variable()
         capital_pos = self.states[capital_id]['POSITION']
         if angle == None:
             if capital_id in self.team_target.keys() and self.team_target[capital_id]['HEALTH'] > 0:
@@ -465,4 +481,71 @@ class FPSEnv(gym.Env):
             angle1 = angle + count // 2 * (-1) ** count * 0.2
             destPos = [capital_pos[0] + dist * np.cos(angle1), -1, capital_pos[2] + dist * np.sin(angle1)]
             #print(destPos)
-            self.move(destPos=destPos, objid_list=[uid], auth='top', group='group1', walkType=walkType, reachDist=reachDist)
+            self.move(destPos=destPos, objid_list=[uid], auth=auth, group=group, pos='replace', walkType=walkType, reachDist=reachDist)
+
+
+    def attack_surround(self, target_objid=-1, team_id=1, capital_id=0, dis=15):
+        '''
+        指定小队成员先包围再攻击
+        暂定为半圆  整圆太容易死
+        愚蠢的实现方法
+        '''
+        if target_objid < 0:
+            enemy_nearby = self.get_enemy_nearby()
+            if len(enemy_nearby) == 0:
+                return
+            target_objid = list(enemy_nearby.keys())[0]
+        num = len(self.team_member[team_id]) - 1
+        target_pos = self.states[target_objid]['POSITION']
+        capital_pos = self.states[capital_id]['POSITION']
+        angle = np.arctan2(capital_pos[2] - target_pos[2], capital_pos[0] - target_pos[0])
+        count = 0
+        #self.search_enemy_attack(auth='top')
+        print('done')
+        for uid in self.team_member[team_id]:
+            if uid == capital_id:
+                continue
+            count += 1
+            if num < 2:
+                move_angle = angle
+            else:
+                move_angle = angle + np.pi / 2 / (num // 2) * (count // 2) * (-1) ** count
+            move_pos = [target_pos[0] + dis * np.cos(move_angle), -1, target_pos[2] + dis * np.sin(move_angle)]
+            self.move(move_pos, [uid], auth='normal', pos='replace', walkType='run', reachDist=3, maxDoTimes=1)
+            threading.Thread(target=self.arrive_attack, args=(uid, move_pos, 6)).start()
+            #time.sleep(2)
+            #self.search_enemy_attack([uid],auth='normal',pos='tail')
+
+
+    def arrive_attack(self, uid, pos, dis=6):
+        '''
+        围攻专用 因为目标点不一定可达所以2秒后强行下攻击指令
+        '''
+        for i in range(10):
+            time.sleep(0.2)
+            unit = self.states[uid]
+            if unit['HEALTH'] <= 0:
+                return
+            cur_pos = unit['POSITION']
+            if get_dis(pos, cur_pos, False) < dis:
+                self.origin_ai([uid])
+                return
+        self.origin_ai([uid])
+
+
+
+    def origin_ai(self, objid_list='all', team_id=1):
+        if type(objid_list) == int:
+            objid_list = [objid_list]
+        elif objid_list == 'all':
+            objid_list = self.units.keys()
+
+        ai = '<check name="CheckTimeChk" interval="0"><check name="CanAttackTargetChk"> <action name="ShootAct"/> <action name="MoveToPosAct" destObj="target" walkType="run" reachDist="6"/> </check>'
+        ai += '<check name="CheckTimeChk" interval="0.2"> <action name="SearchEnemyAct"/>  <action name="SearchLeaderAct">'
+        ai += '<action name="MoveToPosAct" destObj="leader" walkType="run"  reachDist="6"/> </action> <action name="PatrolAct"/> </check></check>'
+        for uid in objid_list:
+            s = 'objid_list=%s`auth=normal`group=group1`pos=replace`ai=%s' % (list2str(objid_list), ai)
+            self.make_action(s)
+
+        return s
+

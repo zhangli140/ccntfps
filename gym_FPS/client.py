@@ -20,6 +20,7 @@ class Client(object):
     def connect(self, ):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
         self.sock.connect((self.SEVERIP,self.SERVERPORT))
+        #self.sock.settimeout(1000)
         return self.sock
 
     def send(self, cmd, ):
@@ -43,26 +44,26 @@ class Client(object):
 
     def receive(self, ):
         try:
-            self.receive_buf = ''
-            flag=True
-            count=0
+            receive_buf = ''
+            flag = True
+            count = 0
             while flag:
                 st = self.sock.recv(8192)
                 count += 1
                 if 10 == st[-1]:
-                    flag=False
+                    flag = False
                 st=base64.b64decode(st).decode()
-                self.receive_buf += st
-            if self.receive_buf[-1] == '`':
-                self.receive_buf = self.receive_buf[:-1]
+                receive_buf += st
+            if receive_buf[-1] == '`':
+                receive_buf = receive_buf[:-1]
             if self.DEBUG:
-                print('receive:',self.receive_buf)
+                print('receive:',receive_buf)
                 print(count)
 
-            if self.receive_buf.find('notify')>-1:
-                self.notify.append(self.receive_buf)
-                self.receive()
-            return self.receive_buf
+            if receive_buf.find('notify')>-1:
+                self.notify.append(receive_buf)
+                return self.receive()
+            return receive_buf
         except:
             print('received time out!')
 

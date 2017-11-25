@@ -42,7 +42,6 @@ def str2dict(s, split_char='|', equal_char=':', left_type=None):
             except:
                 pass
         d[key] = value
-
     return ss[0], d
 
 def get_simple_id_list(l):
