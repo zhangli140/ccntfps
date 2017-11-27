@@ -1,0 +1,118 @@
+﻿<scene	speedup="1"	hideWindow="0">
+	<!--巡逻路径点-->
+	<waypointGroup	name="PatrolPath1">
+		<waypoint	pos="-219.27,-0.929,-20.33"/>
+		<waypoint	pos="-198.59,0.2,-26.9"/>
+		<waypoint	pos="-157.18,8.64,11.9"/>
+		<waypoint	pos="-152.1,18.17,54.48"/>
+		<waypoint	pos="-133.68,18.67,56.92"/>
+	</waypointGroup>
+	<waypointGroup	name="PatrolPath2">
+		<waypoint	pos="-93.8,14.01,-28.1"/>
+		<waypoint	pos="-114.8,18.45,4.4"/>
+		<waypoint	pos="-124.2,17.42,29.7"/>
+	</waypointGroup>
+
+	<npc>
+		<!--
+		name			对象名称
+		idx				对象索引,如未设置,则为-1
+		leader_idx=0	代表玩家,玩家的idx,objid均为0,如未设置,则为-1		
+		maxHp			最大生命值
+		type			对象类型 Comrade|Enemy
+		pos				创建坐标 y为-1,表示自动取地面点
+		teamID			所属队伍ID,玩家队默认为1,队长为玩家(idx=0)
+		leaderIdx		队长索引(玩家的idx=0)
+		prefab			对象图形资源
+		waypointGroup	巡逻路径组,对应配置节点/scene/waypointGroup
+		firstWaypoint	第一个巡逻路径点索引,默认1
+		weapon			初始武器 m4|ak47|sniper,默认为m4
+		attackRange		攻击距离,在攻击范围内,优先射击,超出射击范围,自动逼近敌方.默认为30,不同的武器可酌情调整
+		attackDamage	命中伤害,默认10,可根据不同武器设定
+		seeRange		观察距离(可发现范围内的敌人),默认30
+		shootRange		射击距离,默认15
+		runSpeed		奔跑速度,默认6
+		walkSpeed		行走速度,默认2
+		askForHelpRange	求援距离,默认30
+		searchComradeRange	战友搜索距离,默认50
+		-->
+
+		<obj	idx="1"		name="队友1"	type="comrade"	pos="-222.45,-1.407,20.028"		prefab="Prefabs/Comrade" />
+		<obj	idx="2"		name="队友2"	type="comrade"	pos="-225.53,-1.523,20.028"		prefab="Prefabs/Comrade" />	
+		<obj	idx="3"		name="队友3"	type="comrade"	pos="-224.06,-1.469,20.028"		prefab="Prefabs/Comrade"/>
+		<obj	idx="4"		name="队友4"	type="comrade"	pos="-228.323,-1.702,20.028"	prefab="Prefabs/Comrade"/>
+		<obj	idx="5"		name="队友5"	type="comrade"	pos="-226.8354,-1.623,20.028"	prefab="Prefabs/Comrade"/>
+			
+		<obj	idx="6"		name="队友6"		type="comrade"	pos="-221.7,-0.25,22.9" prefab="Prefabs/Comrade"/>	
+		<obj	idx="7"		name="队友7"	type="comrade"	pos="-224.5,-0.45,22.5"	prefab="Prefabs/Comrade"/>		
+		<obj	idx="8"		name="队友8"	type="comrade"	pos="-226.5,-0.56,22.4"	prefab="Prefabs/Comrade"/>		
+		<obj	idx="9"		name="队友9"	type="comrade"	pos="-228.9,-0.75,20.7"	prefab="Prefabs/Comrade"/>		
+		<obj	idx="10"	name="队友10"	type="comrade"	pos="-226.6,-0.47,25.3"	prefab="Prefabs/Comrade"/>		
+		<obj	idx="11"	name="队友11"	type="comrade"	pos="-229.4,-0.71,22.9"	prefab="Prefabs/Comrade"/>
+		<obj	idx="12"	name="队友12"	type="comrade"	pos="-225.3,-0.42,24.8"	prefab="Prefabs/Comrade"/>
+
+		 <!--<obj	idx="21"	name="站岗1"		type="enemy"	pos="-219.9509,-1.848,-15.4"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/Enemy"/>
+
+		<obj	idx="21"	name="巡逻1"		type="enemy"	pos="-198.651,-0.147,-23.739"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/EnemyPatrol" 
+				maxHP="100"		weapon="m4"		attackRange="30"	attackDamage="10"	seeRange="30"	shootRange="15"	
+				runSpeed="6"	walkSpeed="2"	askForHelpRange="30"	searchComradeRange="50" 
+				waypointGroup="PatrolPath1"		firstWaypoint="1">
+		</obj>
+		<obj	idx="21"	name="巡逻2"		type="enemy"	pos="-200.6997,-0.341,-24.826"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/EnemyPatrol"							waypointGroup="PatrolPath1"	firstWaypoint="1"	>
+		</obj>
+		<obj	idx="21"	name="巡逻3"		type="enemy"	pos="-147.2489,16.912,54.033"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/EnemyPatrol"							waypointGroup="PatrolPath1"	firstWaypoint="1"	>
+		</obj>
+		<obj	idx="20"	name="巡逻4"		type="enemy"	pos="-148.3776,16.788,53.654"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/EnemyPatrol"							waypointGroup="PatrolPath1"	firstWaypoint="1"	>
+		</obj>	
+		-->
+		<obj	idx="36"	name="巡逻1"		type="enemy"	pos="-222.2,-0.94,-15.0"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/EnemyPatrol" 
+				maxHP="50"		weapon="ak47"	waypointGroup="PatrolPath1"		firstWaypoint="5">
+		</obj>
+		<obj	idx="13"	name="巡逻2"		type="enemy"	pos="-223.7,-0.95,-17.8"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/EnemyPatrol"							waypointGroup="PatrolPath1"	firstWaypoint="5" weapon="ak47"	maxHP="50">
+		</obj>
+		<obj	idx="14"	name="巡逻3"		type="enemy"	pos="-220.4,-0.4,-26.8"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/EnemyPatrol"							waypointGroup="PatrolPath1"	firstWaypoint="5" weapon="ak47"	maxHP="50">
+		</obj>
+		<obj	idx="34"	name="巡逻7"		type="enemy"	pos="-222.7,0.05,-16.8"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/EnemyPatrol"							waypointGroup="PatrolPath1"	firstWaypoint="5" weapon="ak47"	maxHP="50">
+		</obj>
+		<obj	idx="35"	name="巡逻8"		type="enemy"	pos="-219.4,0.6,-25.8"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/EnemyPatrol"							waypointGroup="PatrolPath1"	firstWaypoint="5" weapon="ak47"	maxHP="50">
+		</obj>
+		<obj	idx="15"	name="巡逻4"		type="enemy"	pos="-90.8,6.65,-63.7"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/EnemyPatrol" waypointGroup="PatrolPath2"	firstWaypoint="1" weapon="ak47" maxHP="50">
+		</obj>
+		<obj	idx="16"	name="巡逻5"		type="enemy"	pos="-93.2,7.17,-66.8"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/EnemyPatrol" waypointGroup="PatrolPath2"	firstWaypoint="1" weapon="ak47" maxHP="50">
+		</obj>
+		<obj	idx="17"	name="巡逻6"		type="enemy"	pos="-92.2,7.17,-61.6"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/Enemy" waypointGroup="PatrolPath2"	firstWaypoint="1" weapon="ak47" maxHP="50">
+		</obj>
+		<obj	idx="18"	name="驻守1"		type="enemy"	pos="-139.4,17.85,45.0"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/EnemyPatrol" 
+				maxHP="50"		weapon="ak47">
+		</obj>
+		<obj	idx="19"	name="驻守2"		type="enemy"	pos="-139.1,17.73,46.9"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/EnemyPatrol" weapon="ak47" 	maxHP="50">
+		</obj>.
+		<obj	idx="20"	name="驻守3"		type="enemy"	pos="-139.8,17.99,49.3"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/EnemyPatrol" weapon="ak47" 	maxHP="50">
+		</obj>
+		<obj	idx="21"	name="驻守4"		type="enemy"	pos="-139.6,19.11,55.3"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/Enemy" weapon="ak47" maxHP="50">
+		</obj>		
+		<obj	idx="22"	name="驻守5"		type="enemy"	pos="-135.5,19.43,55.9"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/Enemy" weapon="ak47" maxHP="50">
+		</obj>
+		<!--<obj	idx="23"	name="驻守6"		type="enemy"	pos="-137.8,19.37,54.7"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/EnemyPatrol" weapon="ak47" >
+		</obj>
+		<obj	idx="24"	name="驻守7"		type="enemy"	pos="-136.0,19.48,56.8"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/EnemyPatrol" weapon="ak47" >
+		</obj>
+	-->
+
+		<obj	idx="25"	name="驻守8"		type="enemy"	pos="-54.1,12.69,24.3"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/Enemy" weapon="ak47" maxHP="50">
+		</obj>
+		<obj	idx="26"	name="驻守9"		type="enemy"	pos="-58.6,12.68,28.1"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/Enemy" weapon="ak47" maxHP="50">
+		</obj>
+		<obj	idx="27"	name="驻守10"		type="enemy"	pos="-51.9,12.67,21.3"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/Enemy" weapon="ak47" maxHP="50">
+		</obj>
+		<obj	idx="28"	name="驻守11"		type="enemy"	pos="-56.3,12.80,20.7"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/Enemy" weapon="ak47" maxHP="50">
+		</obj>
+        <obj	idx="29"	name="站岗1"		type="comrade"	pos="-115.1,21.07,109.0"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/Enemy" weapon='sniper' maxHP="50"/>
+        <obj	idx="30"	name="站岗2"		type="comrade"	pos="-159.5,16.90,-0.4"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/Enemy" weapon='sniper' attackRange="30" attackDamage="0" shootRange="30" maxHP="50"/>
+        <obj	idx="31"	name="站岗3"		type="comrade"	pos="-51.3,22.17,29.1"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/Enemy" weapon='sniper' attackRange="30" attackDamage="0" shootRange="30" maxHP="50"/>
+        <obj	idx="32"	name="站岗4"		type="comrade"	pos="-57.2,19.77,-60.1"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/Enemy" weapon='sniper' attackRange="30" attackDamage="0" shootRange="30" maxHP="50"/>
+        <obj	idx="33"	name="站岗5"		type="comrade"	pos="-140,23.27,-86.6"	teamID="-1"	leaderIdx="-1"	prefab="Prefabs/Enemy" weapon='sniper' attackRange="30" attackDamage="0" shootRange="30" maxHP="50"/>	
+
+
+	</npc>
+</scene>

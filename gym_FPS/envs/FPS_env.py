@@ -549,3 +549,8 @@ class FPSEnv(gym.Env):
 
         return s
 
+    def register(self, key, val):
+        self.refs[key] = val
+    
+    def getVal(self, key):
+        return self.refs[key]
