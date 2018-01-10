@@ -8,25 +8,25 @@ from .import FPS_env as fps
 from ..utils import *
 
 class DemoEnv3(fps.FPSEnv):
-    '''
-    TODO
-    '''
     def __init__(self,):
         super(DemoEnv3, self).__init__()
 
     def _step(self, action):
-        #self.get_game_variable()
+        print('receive action:%d'%action)
         self.state = self.get_state1()
 
         if action == 1:#围一圈保护移动
             self.move_alert()
         elif action == 2:#人墙
-            self.move_to_ahead(angle=0)
+            self.move_to_ahead()
         elif action == 3:#自由攻击
-            self.origin_ai()
-        #    self.search_enemy_attack()
+            #self.origin_ai(team_id=1)
+            #self.search_enemy_attack()
+            self.super_attack()
         elif action == 4:#包围
             self.attack_surround()
+        elif action == 5:#跟随不攻击
+            self.move_follow()
         return self.state, 0, self._check_done(), ''
 
     def _reset(self, ):

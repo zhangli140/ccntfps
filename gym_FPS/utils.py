@@ -117,3 +117,12 @@ def get_dis(pos1, pos2, including_h=False):
     if including_h:
         dis += (pos1[1] - pos2[1]) ** 2
     return dis ** 0.5
+
+def normalize(x, y):
+
+    s = (x ** 2 + y ** 2) ** 0.5
+    if s < 0.01:
+        return x, y
+    x /= s
+    y /= s
+    return x, y

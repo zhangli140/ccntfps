@@ -80,8 +80,8 @@ class DemoEnv2(fps.FPSEnv):
 
     def _reset(self, ):
         self.new_episode()
-        self.playerai()
-        self.move(self.far_awaydespos,objid_list=[0],walkType='run',auth='top')
+        #self.playerai()
+        #self.move(self.far_awaydespos,objid_list=[0],walkType='run',auth='top')
         self.add_obj(name="敌人1",pos=[-244.4,-0.19,66.6],leader_objid=-1,team_id=-1,is_enemy=True,model_name='CustomAI')
         self.add_obj(name="敌人2",pos=[-247.9,-0.63,66.4],leader_objid=-1,team_id=-1,is_enemy=True,model_name='CustomAI')
         self.add_obj(name="敌人3",pos=[-242.2,0.14,67.1],leader_objid=-1,team_id=-1,is_enemy=True,model_name='CustomAI')
@@ -93,7 +93,7 @@ class DemoEnv2(fps.FPSEnv):
         self.add_obj(name="队友4",pos=[-250.7,-1.05,-13.9],leader_objid=-1,team_id=5,is_enemy=False,model_name='CustomAI')
         self.add_obj(name="队友5",pos=[-255.5,-0.71,-12.1],leader_objid=-1,team_id=6,is_enemy=False,model_name='CustomAI')
         #time.sleep(6/self.speedup)
-        statevariable=self.get_game_variable()
+        statevariable=self.states
 
         for playerid,state in statevariable.items():
             if state['TEAM_ID']>0 and playerid!=0:
@@ -114,7 +114,7 @@ class DemoEnv2(fps.FPSEnv):
 
 
     def get_feature(self):
-        vardict=self.get_game_variable()
+        vardict=self.states
         featuredict={}
         enemydict={}
         comradedict={}

@@ -17,7 +17,7 @@ class DemoEnv(fps.FPSEnv):
 
 
     def _step(self, action):
-        super(DemoEnv, self).get_game_variable()
+        #super(DemoEnv, self).get_game_variable()
         hp1, hp2, hp3, hp4 = 0, 0, 0, 0
         for uid, unit in self.states.items():
             if unit['TEAM_ID'] > 0:
@@ -63,7 +63,7 @@ class DemoEnv(fps.FPSEnv):
         self.new_episode()
         self.create_map_obj()
         #self.playerai()
-        self.get_game_variable()
+        #self.get_game_variable()
         return self.get_state1()
 
     def remove_ai(self, ):

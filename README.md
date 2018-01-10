@@ -7,3 +7,8 @@
 ### TODO
 - 几个阵型的距离参数尚未调整 阵型较难看
 - 包围目前只是简单的走直线 是否需要调整？？？
+
+
+## 0110
+- demo_env用于5*5大地图移动 demo_env2为肖祥写的5*5对战环境 demo_env3为最小粒度的step环境
+- vr_version_fps_show_script 为演示流程 network为数据中转，sendeye模拟眼动脑机手势输入 
