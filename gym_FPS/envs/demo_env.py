@@ -62,35 +62,9 @@ class DemoEnv(fps.FPSEnv):
     def _reset(self, ):
         self.new_episode()
         self.create_map_obj()
-        #self.playerai()
+        self.playerai()
         #self.get_game_variable()
         return self.get_state1()
-
-    def remove_ai(self, ):
-        pass
-
-
-
-    def create_map_obj(self, ):
-        '''
-        布兵
-        '''
-        '''
-        self.add_obj(name='站岗1',is_enemy=True,pos=[-115.1,21.07,109.0],leader_objid=-1,team_id=-1,dir=[0,0,0])
-        self.add_obj(name='站岗2',is_enemy=True,pos=[-159.5,16.90,-0.4],leader_objid=-1,team_id=-1,dir=[0,0,0])
-        self.add_obj(name='站岗3',is_enemy=True,pos=[-51.3,22.17,29.1],leader_objid=-1,team_id=-1,dir=[0,0,0])
-        self.add_obj(name='站岗4',is_enemy=True,pos=[-57.2,19.77,-60.1],leader_objid=-1,team_id=-1,dir=[0,0,0])
-        self.add_obj(name='站岗5',is_enemy=True,pos=[-140,23.27,-86.6],leader_objid=-1,team_id=-1,dir=[0,0,0])
-        self.add_obj(name='巡逻1',is_enemy=True,pos=[-222.2,-0.94,-15.0],leader_objid=-1,team_id=-1,dir=[0,0,0])
-        self.add_obj(name='巡逻2',is_enemy=True,pos=[-223.7,-0.95,-17.8],leader_objid=-1,team_id=-1,dir=[0,0,0])
-        self.add_obj(name='巡逻3',is_enemy=True,pos=[-220.4,-0.40,-26.8],leader_objid=-1,team_id=-1,dir=[0,0,0])
-        self.add_obj(name='巡逻4',is_enemy=True,pos=[-153.0,17.82,52.5],leader_objid=-1,team_id=-1,dir=[0,0,0])
-        self.add_obj(name='巡逻5',is_enemy=True,pos=[-132.2,17.44,84.7],leader_objid=-1,team_id=-1,dir=[0,0,0])
-        self.add_obj(name='巡逻6',is_enemy=True,pos=[-132.0,18.05,80.2],leader_objid=-1,team_id=-1,dir=[0,0,0])
-        self.add_obj(name='巡逻7',is_enemy=True,pos=[-90.8,6.65,-63.7],leader_objid=-1,team_id=-1,dir=[0,0,0])
-        self.add_obj(name='巡逻8',is_enemy=True,pos=[-92.2,7.17,-61.6],leader_objid=-1,team_id=-1,dir=[0,0,0])
-        '''
-
 
     def get_state1(self, team_id=1):
         '''
@@ -142,7 +116,7 @@ class DemoEnv(fps.FPSEnv):
         '''
         检查是否为新的一帧
         '''
-        unit0 = self.get_game_variable()[0]
+        unit0 = self.states[0]
         mapid = list(pos2mapid(unit0['POSITION']))
         if mapid != self.mapid:
             self.mapid = mapid
