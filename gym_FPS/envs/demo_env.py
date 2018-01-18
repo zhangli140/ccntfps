@@ -61,7 +61,6 @@ class DemoEnv(fps.FPSEnv):
 
     def _reset(self, ):
         self.new_episode()
-        self.create_map_obj()
         self.playerai()
         #self.get_game_variable()
         return self.get_state1()
