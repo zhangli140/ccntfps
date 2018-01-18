@@ -3,6 +3,8 @@ from . import client
 from .envs.demo_env import DemoEnv
 from .envs.demo_env2 import DemoEnv2
 from .envs.demo_env3 import DemoEnv3
+from .envs.double_battle_env import doubleBattleEnv
+from .envs.starcraft import *
 
 register(
     id='FPSDemo-v0',
@@ -13,3 +15,6 @@ register(
 register(
     id='FPSDemo-v3',
     entry_point='gym_FPS:DemoEnv3',)
+register(
+    id='FPSDouble-v0',
+    entry_point='gym_FPS:doubleBattleEnv')
