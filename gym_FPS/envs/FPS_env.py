@@ -5,8 +5,8 @@ import math, random, threading
 import gym
 import time
 
-from utils import *
-from client import *
+from ..utils import *
+from ..client import *
 
 
 class FPSEnv(gym.Env):
