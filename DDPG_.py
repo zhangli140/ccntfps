@@ -2,7 +2,8 @@
 
 from __future__ import division
 import numpy as np
-from gym_FPS.envs.starcraft.Config import *
+import gym_FPS
+import gym_FPS.envs.starcraft.Config as Config
 import argparse
 import pickle
 from gym_FPS.envs.starcraft.model import *
@@ -12,7 +13,7 @@ import time
 import os, gym
 from gym_FPS.utils import *
 
-CONFIG = Config()
+CONFIG = Config.Config()
 MEMORY_CAPACITY = CONFIG.memory_capacity
 parser = argparse.ArgumentParser()
 parser.add_argument('--ip', help='server ip', default=CONFIG.serverip)
@@ -36,7 +37,7 @@ def wf(str, flag):
     F_battle.close()
 
 
-def get_next_feature(state,unit_size,flag):
+def get_next_feature(state, unit_size, flag):
     s = []
     if type(state) is list:
         pass
@@ -86,7 +87,7 @@ def get_action(state, unit_size, flag):
 
 
 
-def store(state, s1,state_,s1_, action, total_reward, unit_size, unit_size_,flag):
+def store(state, s1, state_, s1_, action, total_reward, unit_size, unit_size_, flag):
     if type(state) is list:
         return
     if type(state_) is list:

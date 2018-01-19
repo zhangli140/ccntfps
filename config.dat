@@ -5,6 +5,8 @@ serverip=127.0.0.1
 serverport=5123
 sleeptime=1
 max_dist=100
+game_dir="G:/qjh/20161028 无人机/20171030FPS/fps_支持restart指令/Fps.exe"
+wait_for_game_start=10
 [model]
 hidden_size=70
 std=0.3

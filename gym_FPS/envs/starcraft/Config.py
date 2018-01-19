@@ -1,9 +1,9 @@
 import configparser
 
+cf = configparser.ConfigParser()
+cf.read('config.dat', encoding='utf-8')
 
 class Config(object):
-    cf = configparser.ConfigParser()
-    cf.read('config.dat')
 
     serverip = cf.get('fps', 'serverip')
     serverport = cf.getint('fps', 'serverport')
@@ -11,6 +11,8 @@ class Config(object):
     frame_skip = cf.getint('fps', 'frame_skip')
     sleeptime = cf.getfloat('fps', 'sleeptime')
     max_dist = cf.getfloat('fps','max_dist')
+    game_dir = cf.get('fps','game_dir')
+    wait_for_game_start = cf.getfloat('fps', 'wait_for_game_start')
 
 
     hidden_size = cf.getint('model', 'hidden_size')

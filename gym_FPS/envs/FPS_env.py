@@ -3,17 +3,21 @@
 import numpy as np
 import math, random, threading
 import gym
-import time
+import time, os
 
 from ..utils import *
 from ..client import *
+from .starcraft import Config
 
 
 class FPSEnv(gym.Env):
     def __init__(self, ):
         # self.set_env()
         # self.playerai()
-        pass
+        
+        CONFIG = Config.Config()
+        os.popen(CONFIG.game_dir)
+        time.sleep(CONFIG.wait_for_game_start)
 
     def _step(self, action):
         raise NotImplementedError
