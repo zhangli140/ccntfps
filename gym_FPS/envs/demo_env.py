@@ -13,7 +13,7 @@ class DemoEnv(fps.FPSEnv):
         self.target_mapid = [0, 0]
         self.is_battle = False
         self.enemy_nearby = dict()
-
+        self.t=time.time()
 
 
     def _step(self, action):
@@ -117,21 +117,29 @@ class DemoEnv(fps.FPSEnv):
         '''
         unit0 = self.states[0]
         mapid = list(pos2mapid(unit0['POSITION']))
+        t=time.time()
+        if t-self.t>10:
+            self.t=t
+            return True, 'time_out'
         if mapid != self.mapid:
             self.mapid = mapid
             self.frame += 1
+            self.t=t
             return True, 'new_map_pos'
         self.enemy_nearby = self.get_enemy_nearby()
         if len(self.enemy_nearby) > 0 and self.is_battle == False:
             self.frame += 1
             self.is_battle = True
+            self.t=t
             return True, 'find_enemy'
         if self.is_battle and len(self.enemy_nearby) == 0:
             self.frame += 1
             self.is_battle = False
+            self.t=t
             return True, 'battle_end'
         if mapid==self.target_mapid:
             self.frame += 1
+            self.t=t
             return True, 'arrive'
         return False, ''
 
