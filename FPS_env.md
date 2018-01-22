@@ -42,9 +42,15 @@
 - 做一个自定义动作 目前仅支持str类型
 
 ## add_obj(self, name, is_enemy, pos, leader_objid, team_id, dir=[0, 0, 0], model_name='DefaultAI', weapon='m4')
-- 添加一个单位
-- 敌方单位 leader_objid, team_id都应为-1
-- model_name 为AI模板不是人物模型
+- 向地图指定位置加一个单位
+- name:str
+- is_enemy bool 标记是否为敌人，若为`True`，则`leader_objid`和`team_id`都应为-1
+- pos: list of length 3 位置
+- leader_objid: int 队长id，只对己方有效
+- team_id: int 队伍编号，只对己方有效
+- dir: list of length 3 `[angle,roll,pitch]`
+- model_name: str 为AI模板不是人物模型
+- weapon: str 武器类型
 
 ## add_obj_list(self, name, pos, leader_objid, team_id, width, num, is_enemy=False, dir=[0, 0, 0], model_name='DefaultAI')
 - 在一个区域内随机添加一堆人 会重名
