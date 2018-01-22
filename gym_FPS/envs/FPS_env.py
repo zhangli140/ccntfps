@@ -133,9 +133,10 @@ class FPSEnv(gym.Env):
                 states[key]['LAST_POSITION'] = states[key]['POSITION']
 
             self.client.send('cmd=get_game_variable`objid_list=%s' % (objid_list))
-            while len(self.client.game_variable) == 0:
-                time.sleep(0.05)
             s = self.client.game_variable
+            while len(s) == 0:
+                time.sleep(0.05)
+                s = self.client.game_variable
             for key in states.keys():
                 states[key]['HEALTH'] = 0
             for ss in s.split('`')[1:]:
@@ -361,17 +362,17 @@ class FPSEnv(gym.Env):
         绘制一条提示路径
         '''
         pos_list = '|'.join([list2str(l) for l in pos_list])
-        cmd = 'cmd=draw_pathine`pos_list=%s' % pos_list
-        self.client.send(pos_list)
+        cmd = 'cmd=draw_pathline`pos_list=%s' % pos_list
+        self.client.send(cmd)
         self.path_id += 1
         return self.path_id
 
-    def remove_pathline(self, mark_id):
+    def remove_pathline(self, path_id):
         '''
         根据id清除path
         '''
-        cmd = 'cmd=remove_pathline`id=%d' % remove_pathline
-        self.client.send(pos_list)
+        cmd = 'cmd=remove_pathline`id=%d' % path_id
+        self.client.send(cmd)
 
     def add_observer(self, pos, radius):
         '''
@@ -380,8 +381,11 @@ class FPSEnv(gym.Env):
         cmd = 'cmd=add_observer`pos=%s`radius=%d' % (list2str(pos), radius)
         self.client.send(cmd)
 
-    def add_chat(self, msg, obj_id, close_time):
-        cmd = 'cmd=add_chat`msg=%s`obj_id=%d`close_time=%d' % (msg, obj_id, close_time)
+    def add_chat(self, msg, obj_id, close_time=5):
+        self.show_ui_win('ChatWin', 1)
+        cmd = 'cmd=add_chat`msg=%s`obj_id=%d' % (msg, obj_id)
+        if close_time > 0:
+            cmd += '`close_time=%d' % close_time
         self.client.send(cmd)
 
     def select_obj(self, objid, is_select=1):
@@ -395,7 +399,29 @@ class FPSEnv(gym.Env):
         '''
         设置任务面板
         '''
+        self.show_ui_win('TaskWin', 1)
         cmd = 'cmd=set_task`msg=%s' % (msg)
+        self.client.send(cmd)
+        threading.Thread(target=self.wait_close, args=('TaskWin', 5,)).start()
+
+    def wait_close(self, name, wait_time=5, ):
+        time.sleep(wait_time)
+        self.show_ui_win(name, 0)
+
+
+    def show_ui_win(self, name, is_show=1):
+        '''
+        显示ui界面
+        name=[HelpWin|CtrlWin|ReplayWin|InfoWin|StatusWin|ChatWin|TaskWin]
+        '''
+        cmd = 'cmd=show_ui_win`name=%s`is_show=%d' % (name, is_show)
+        self.client.send(cmd)
+
+    def watch_obj(self, obj_id, is_watch=1):
+        '''
+        附身观察
+        '''
+        cmd = 'cmd=watch_obj`obj_id=%d`is_watch=%d' % (obj_id, is_watch)
         self.client.send(cmd)
 
     def is_arrived(self, objid, target_pos, dis=-1):
@@ -416,7 +442,7 @@ class FPSEnv(gym.Env):
         编队  队员必须提前存在
         '''
         cmd = 'cmd=create_team`leader_objid=%d`member_objid_list=%s`team_id=%d' % (
-        leader_objid, list2str(member_objid_list), team_id)
+            leader_objid, list2str(member_objid_list), team_id)
         self.client.send(cmd)
         # s = self.client.receive()
         return  # s
@@ -438,6 +464,17 @@ class FPSEnv(gym.Env):
         self.client.send(cmd)
         # s = self.client.receive()
         return  # s
+
+    def super_attack(self, team_id=1, mindis=50):
+        '''
+        超搜索距离攻击！！！
+        '''
+        enemy_nearby = self.get_enemy_nearby(mindis=mindis)
+        if len(enemy_nearby) == 0:
+            return 
+        for uid in self.team_member[team_id]:
+            eid = random.sample(enemy_nearby.keys(), 1)[0]
+            self.can_attack_move([uid], destPos=self.states[eid]['POSITION'], team_id=1, walkType='run')
 
     def can_attack_move(self, objid_list, destObjID='', destObj='', destPos='', team_id=None, auth='normal',
                         group='group1', pos='replace', walkType='walk', reachDist=6):
@@ -467,7 +504,7 @@ class FPSEnv(gym.Env):
         cmd += '<action name="MoveToPosAct" destObj="target" walkType="run"  reachDist="6"/></check>'
         # cmd += "<check name='CanAttackTargetAct'><action name='ShootAct'/></check>"
         cmd += '<action name="MoveToPosAct" destObjID="%s" destObj="%s" destPos="%s"  walkType="%s"  reachDist="%d"/></check>' % (
-        destObjID, destObj, list2str(destPos), walkType, reachDist)
+            destObjID, destObj, list2str(destPos), walkType, reachDist)
         if self.DEBUG:
             print(destPos)
             print(cmd)
@@ -482,7 +519,7 @@ class FPSEnv(gym.Env):
         '''
         cmd = "cmd=make_action`objid_list=%s`auth=%s`group=group1`pos=%s`ai=" % (list2str(objid_list), auth, pos)
         cmd += '<check name="CheckTimeChk" interval="0"><action name="ShootAct"/><action name="MoveToPosAct" destObj="target" walkType="run"  reachDist="12"/></check>'
-        print(cmd)
+        #print(cmd)
         self.client.send(cmd)
         # s = self.client.receive()
         return  # s
@@ -583,27 +620,37 @@ class FPSEnv(gym.Env):
         # self.get_game_variable()
         capital_pos = self.states[capital_id]['POSITION']
         if angle == None:
-            if capital_id in self.team_target.keys() and self.team_target[capital_id]['HEALTH'] > 0:
-                target_id = self.team_target[capital_id]
-                target_pos = self.states[target_id]['POSITION']
+            #if capital_id in self.team_target.keys() and self.team_target[capital_id]['HEALTH'] > 0:
+            #    target_id = self.team_target[capital_id]
+            #    target_pos = self.states[target_id]['POSITION']
+            #    angle = np.arctan2(target_pos[2] - capital_pos[2], target_pos[0] - capital_pos[0])
+            enemy_nearby = self.get_enemy_nearby(mindis=40)
+            if len(enemy_nearby) > 0:
+                eid = list(enemy_nearby.keys())[0]
+                target_pos = self.states[eid]['POSITION']
+                print(target_pos, capital_pos)
                 angle = np.arctan2(target_pos[2] - capital_pos[2], target_pos[0] - capital_pos[0])
             else:
-                print('need angle when capital have no attack target')
-                return
+                #print('need angle when capital have no attack target')
+                #return
+                angle = 0
 
-                # print('angle%f'%angle)
+        # print('angle%f'%angle)
         count = 0
         for uid in self.team_member[team_id]:
             if uid == capital_id:
                 continue
             count += 1
             # self.attack(uid)
-            angle1 = angle + count // 2 * (-1) ** count * 0.2
+            if len(self.team_member[team_id]) % 2 == 1:
+                angle1 = angle + (2 * ((count - 1) // 2) + 1) * (-1) ** count * 0.1
+            else:
+                angle1 = angle + count // 2 * (-1) ** count * 0.2
             destPos = [capital_pos[0] + dist * np.cos(angle1), -1, capital_pos[2] + dist * np.sin(angle1)]
             # print(destPos)
             self.move(destPos=destPos, objid_list=[uid], auth=auth, group=group, pos='replace', walkType=walkType,
                       reachDist=reachDist)
-            threading.Thread(target=self.arrive_attack, args=(uid, destPos, 3)).start()
+            threading.Thread(target=self.arrive_attack, args=(uid, destPos, 1, False)).start()
 
     def attack_surround(self, target_objid=-1, team_id=1, capital_id=0, dis=15):
         '''
@@ -632,7 +679,7 @@ class FPSEnv(gym.Env):
                 move_angle = angle + np.pi / 2 / (num // 2) * (count // 2) * (-1) ** count
             move_pos = [target_pos[0] + dis * np.cos(move_angle), -1, target_pos[2] + dis * np.sin(move_angle)]
             self.move(move_pos, [uid], auth='normal', pos='replace', walkType='run', reachDist=3, maxDoTimes=1)
-            threading.Thread(target=self.arrive_attack, args=(uid, move_pos, 6)).start()
+            threading.Thread(target=self.arrive_attack, args=(uid, move_pos, 6, True)).start()
             # time.sleep(2)
             # self.search_enemy_attack([uid],auth='normal',pos='tail')
 
@@ -640,8 +687,10 @@ class FPSEnv(gym.Env):
         '''
         左上角的ui提示
         '''
-        cmd = 'cmd=add_ui_prompt`msg=%s' % msg
+        self.show_ui_win('InfoWin', 1)
+        cmd = 'cmd=add_ui_prompt`msg=%s'%msg
         self.client.send(cmd)
+        threading.Thread(target=self.wait_close, args=('TaskWin', 5,)).start()
 
     def move_follow(self, objid_list='all', team_id=1, leader_objid=0, ):
         '''
@@ -658,20 +707,23 @@ class FPSEnv(gym.Env):
             (list2str(objid_list), team_id, ai)
         self.make_action(s)
 
-    def arrive_attack(self, uid, pos, dis=6):
+    def arrive_attack(self, uid, pos, dis=6, move_attack=True):
         '''
         围攻专用 因为目标点不一定可达所以2秒后强行下攻击指令
         '''
-        for i in range(10):
-            time.sleep(0.2)
+        print('arrive attack ', pos)
+        for i in range(40):
+            time.sleep(0.1)
             unit = self.states[uid]
             if unit['HEALTH'] <= 0:
                 return
             cur_pos = unit['POSITION']
             if get_dis(pos, cur_pos, False) < dis:
-                self.origin_ai([uid])
+                print('curpos:12',cur_pos)
+                self.origin_ai([uid], move_attack=move_attack)
                 return
-        self.origin_ai([uid])
+        print('cur_pos:123',cur_pos)
+        self.origin_ai([uid], move_attack=move_attack)
 
     def origin_ai(self, objid_list='all', team_id=-1):
         '''
@@ -683,13 +735,17 @@ class FPSEnv(gym.Env):
         elif objid_list == 'all':
             objid_list = self.units.keys()
 
-        ai = '<check name="CheckTimeChk" interval="0"><check name="CanAttackTargetChk"> <action name="ShootAct"/> <action name="MoveToPosAct" destObj="target" walkType="run" reachDist="12"/> </check>'
+        if move_attack:
+            move_attack = '<action name="MoveToPosAct" destObj="target" walkType="run" reachDist="12"/>'
+        else:
+            move_attack = ''
+        ai = '<check name="CheckTimeChk" interval="0"><check name="CanAttackTargetChk"> <action name="ShootAct"/> %s </check>' % (move_attack)
         ai += '<check name="CheckTimeChk" interval="0.2"> <action name="SearchEnemyAct"/>  <action name="SearchLeaderAct">'
         ai += '<action name="MoveToPosAct" destObj="leader" walkType="run"  reachDist="6"/> </action> <action name="PatrolAct"/> </check></check>'
         if team_id > -1:
             team_id_str = 'team_id=%d`' % team_id
         else:
-            team_id_str = ''
+            team_id_str = '' 
         s = 'objid_list=%s`%sauth=normal`group=group1`pos=replace`ai=%s' % (list2str(objid_list), team_id_str, ai)
         self.make_action(s)
 
@@ -697,6 +753,6 @@ class FPSEnv(gym.Env):
 
     def register(self, key, val):
         self.refs[key] = val
-
+    
     def getVal(self, key):
         return self.refs[key]
