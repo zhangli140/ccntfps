@@ -1,0 +1,55 @@
+﻿<scene  speedup="8" hideWindow="0" mainPlayerPos="-150,-1,47">
+
+    <!--巡逻路径点-->
+    <waypointGroup  name="PatrolPath1">
+        <waypoint   pos="-219.27,-0.929,-20.33"/>
+        <waypoint   pos="-198.59,0.2,-26.9"/>
+        <waypoint   pos="-157.18,8.64,11.9"/>
+        <waypoint   pos="-152.1,18.17,54.48"/>
+        <waypoint   pos="-133.68,18.67,56.92"/>
+    </waypointGroup>
+    <waypointGroup  name="PatrolPath2">
+        <waypoint   pos="-93.8,14.01,-28.1"/>
+        <waypoint   pos="-114.8,18.45,4.4"/>
+        <waypoint   pos="-124.2,17.42,29.7"/>
+    </waypointGroup>
+
+    <npc>
+        <!--
+        name            对象名称
+        idx             对象索引,如未设置,则为-1
+        leader_idx=0    代表玩家,玩家的idx,objid均为0,如未设置,则为-1      
+        maxHp           最大生命值
+        type            对象类型 Comrade|Enemy
+        pos             创建坐标 y为-1,表示自动取地面点
+        teamID          所属队伍ID,玩家队默认为1,队长为玩家(idx=0)
+        leaderIdx       队长索引(玩家的idx=0)
+        prefab          对象图形资源
+        waypointGroup   巡逻路径组,对应配置节点/scene/waypointGroup
+        firstWaypoint   第一个巡逻路径点索引,默认1
+        weapon          初始武器 m4|ak47|sniper,默认为m4
+        attackRange     攻击距离,在攻击范围内,优先射击,超出射击范围,自动逼近敌方.默认为30,不同的武器可酌情调整
+        attackDamage    命中伤害,默认10,可根据不同武器设定
+        seeRange        观察距离(可发现范围内的敌人),默认30
+        shootRange      射击距离,默认15
+        runSpeed        奔跑速度,默认6
+        walkSpeed       行走速度,默认2
+        askForHelpRange 求援距离,默认30
+        searchComradeRange  战友搜索距离,默认50
+        -->
+        <!--<obj    idx="21"    name="站岗1"      type="enemy"    pos="-219.9509,-1.848,-15.4"    teamID="-1" leaderIdx="-1"  prefab="Prefabs/Enemy"/>
+          -->
+        <obj    idx="21"    name="巡逻1"      type="enemy"    pos="-198.651,-0.147,-23.739"   teamID="-1" leaderIdx="-1"  prefab="Prefabs/EnemyPatrol" 
+                maxHP="100"     weapon="m4"     attackRange="30"    attackDamage="10"   seeRange="30"   shootRange="15" 
+                runSpeed="6"    walkSpeed="2"   askForHelpRange="30"    searchComradeRange="50" 
+                waypointGroup="PatrolPath1"     firstWaypoint="1">
+        </obj>
+        <obj    idx="21"    name="巡逻2"      type="enemy"    pos="-200.6997,-0.341,-24.826"  teamID="-1" leaderIdx="-1"  prefab="Prefabs/EnemyPatrol"                            waypointGroup="PatrolPath1" firstWaypoint="1"   >
+        </obj>
+        <obj    idx="21"    name="巡逻3"      type="enemy"    pos="-147.2489,16.912,54.033"   teamID="-1" leaderIdx="-1"  prefab="Prefabs/EnemyPatrol"                            waypointGroup="PatrolPath1" firstWaypoint="1"   >
+        </obj>
+        <obj    idx="20"    name="巡逻4"      type="enemy"    pos="-148.3776,16.788,53.654"   teamID="-1" leaderIdx="-1"  prefab="Prefabs/EnemyPatrol"                            waypointGroup="PatrolPath1" firstWaypoint="1"   >
+        </obj>      
+        
+    </npc>
+</scene>

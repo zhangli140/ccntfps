@@ -4,6 +4,8 @@ from .envs.demo_env import DemoEnv
 from .envs.demo_env2 import DemoEnv2
 from .envs.demo_env3 import DemoEnv3
 from .envs.double_battle_env import doubleBattleEnv
+from .envs.single_battle_env import SingleBattleEnv
+from .envs.map_env import MapEnv
 from .envs.starcraft import *
 
 register(
@@ -18,3 +20,9 @@ register(
 register(
     id='FPSDouble-v0',
     entry_point='gym_FPS:doubleBattleEnv')
+register(
+    id='FPSSingle-v0',
+    entry_point='gym_FPS:singleBattleEnv')
+register(
+    id='FPSMap-v0',
+    entry_point='gym_FPS:MapEnv')

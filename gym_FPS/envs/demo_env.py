@@ -4,6 +4,7 @@ import math, time, random
 import numpy as np
 from gym import spaces
 from .import FPS_env as fps
+from copy import deepcopy
 
 from ..utils import *
 
@@ -27,7 +28,7 @@ class DemoEnv(fps.FPSEnv):
 
         self.target_mapid = [action // 5, action % 5]
         #self.map_move(team_id=1, target_map_pos=self.target_mapid)
-        self.map_move(team_id=1, objid_list=[0], target_map_pos=self.target_mapid)
+        self.map_move(team_id=1, objid_list='all', target_map_pos=self.target_mapid)
         is_new_frame, s = self.check_frame()
         while not is_new_frame:
             time.sleep(1 / self.speedup)
@@ -37,8 +38,6 @@ class DemoEnv(fps.FPSEnv):
                 #print(enemy_nearby_id)
                 for uid in self.team_member[1]:
                     target = random.choice(enemy_nearby_id)
-                    while self.states[target]['HEALTH'] <= 0:
-                        target = random.choice(enemy_nearby_id)
                     #print(uid, target)
                     if uid not in self.attack_target.keys():
                         self.set_target_objid([uid], target)
@@ -56,11 +55,12 @@ class DemoEnv(fps.FPSEnv):
                 hp4 += max(0, unit['HEALTH'])
 
         reward = hp1 - hp3 - hp2 + hp4
-        done = hp3 * hp4 == 0
+        done = hp3 * hp4 < 1
         return self.get_state1(), reward, done, '' if not done else 'win' if hp4 == 0 else 'lose' 
 
     def _reset(self, ):
         self.new_episode()
+        #self.create_map_obj()
         self.playerai()
         #self.get_game_variable()
         return self.get_state1()

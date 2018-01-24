@@ -51,7 +51,7 @@ def maxmin_distance(units_my, units_enemy):
                 min_dist = dist
         if min_dist > max_dist:
             max_dist = min_dist
-        print('max_dist',max_dist)
+        #print('max_dist',max_dist)
     for _, _ in units_enemy.items():
         nb_them = nb_them + 1
     if max_dist > CONFIG.max_dist and nb_them > 0 and nb_us > 0:

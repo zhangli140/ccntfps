@@ -125,13 +125,13 @@ class DDPG(object):
                                                                                self.unit_size_:bt[i].unit_size_})
 #            self.summary_writer.add_summary(summary, self.sess.run(self.global_step))
 
-    def store_transition(self, s, s1,a, r, s_,s1_, unit_size,unit_size_):
+    def store_transition(self, s, s1, a, r, s_, s1_, unit_size, unit_size_):
         mymemory = Memory(s,s1, a, r, s_,s1_, unit_size,unit_size_)
         index = self.pointer % MEMORY_CAPACITY  # replace the old memory with new memory
         self.memory[index] = mymemory
         self.pointer += 1
 
-    def _build_a(self, s,s1, scope, trainable, unit_size):
+    def _build_a(self, s, s1, scope, trainable, unit_size):
         with tf.variable_scope(scope):  # s:[enemy_size+unit_size,hidden_size]
             w1 = tf.Variable(
                 tf.truncated_normal([self.s_dim, CONFIG.hidden_size * 2], stddev=CONFIG.std, dtype=tf.float32),
@@ -141,7 +141,7 @@ class DDPG(object):
             x1 = tf.nn.elu(tf.matmul(s1, w1) + b1)
             mean_pool = tf.reduce_mean(x, axis=0)
             max_pool = tf.reduce_max(x, axis=0)
-            feature = tf.concat([ mean_pool, max_pool],axis=0)
+            feature = tf.concat([ mean_pool, max_pool], axis=0)
             feature = tf.reshape(feature, [1, 4 * CONFIG.hidden_size])
             feature = tf.multiply(feature, tf.zeros([unit_size, 1]) + 1)  # unit_size,4*config.hidden_size
             feature = tf.concat([x1,feature], axis = 1)

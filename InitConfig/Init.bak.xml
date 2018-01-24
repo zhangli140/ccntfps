@@ -1,0 +1,19 @@
+﻿<root>
+	<!--npc武器
+	shootCD: 射击间隔时间
+	shootInaccuracy: 射击误差
+	shootRange:	射击距离
+	attackDamage: 射击伤害
+	-->
+	<npcWeapon>
+		<m4		idx="0"	shootCD="1.5"		shootInaccuracy="0.15"	shootRange="12"	attackDamage="1"/>
+		<ak47	idx="1"	shootCD="2.0"		shootInaccuracy="0.35"	shootRange="15"	attackDamage="1"/>
+		<sniper	idx="2"	shootCD="5.0"		shootInaccuracy="0.01"	shootRange="30"	attackDamage="1"/>
+	</npcWeapon>
+	<!--场景配置
+	config:场景配置文件
+	speedup:加速倍数,默认不加速
+	minsize:启动后最小化
+	-->
+	<scene	name="IsLand"	config="InitConfig/IsLand.xml"/>
+</root>

@@ -3,9 +3,9 @@ from __future__ import division
 import numpy as np
 import math
 from gym import spaces
-import utils
+from .. import utils 
 
-import FPS_env as fc
+from . import FPS_env as fc
 import time
 from .starcraft.Config import *
 import copy
@@ -81,7 +81,7 @@ class SingleBattleEnv(fc.FPSEnv):
         self.init_my_units = self.state['units_myself']
         unit_size = len(self.state['units_myself'])
         unit_size_e = len(self.state['units_enemy'])
-
+        self.add_observer([-220, -1, 20], 2000)
         return self.obs,unit_size,unit_size_e
 
 
@@ -105,7 +105,7 @@ class SingleBattleEnv(fc.FPSEnv):
                 degree = action[i][1]
                 distance = (action[i][2] + 1) * DISTANCE_FACTOR
                 x2, y2 = utils.get_position(degree, distance, myself['POSITION'][0], myself['POSITION'][2])
-                enemy_id,distance = utils.get_closest(x2, y2, self.state['units_enemy'])
+                enemy_id, distance = utils.get_closest(x2, y2, self.state['units_enemy'])
                 cmds.append([0,uid,enemy_id])
             else:
                 # Move action
@@ -114,7 +114,7 @@ class SingleBattleEnv(fc.FPSEnv):
                 degree = action[i][1]
                 distance = (action[i][2] + 1) * DISTANCE_FACTOR
                 x2, y2 = utils.get_position(degree, distance, myself['POSITION'][0], myself['POSITION'][2])
-                cmds.append([1,uid,[x2,-1,y2]])
+                cmds.append([1, uid, [x2, -1, y2]])
             i += 1
         # print "commands send!"
         return cmds
@@ -136,6 +136,8 @@ class SingleBattleEnv(fc.FPSEnv):
 
     def _step(self, action):
         self.episode_steps += 1
+        action = action.copy()####防止影响store
+        action[-1] *= np.pi#####degree范围不应该是[-1,1]
         commands = self._make_commands(action)
         print(commands)
         self.current_my_units = copy.deepcopy(self.state['units_myself'])
@@ -198,18 +200,16 @@ class SingleBattleEnv(fc.FPSEnv):
             observations[count, 1] = ut['HEALTH']/float(50)
             observations[count, 2] = ut['POSITION'][0]     #x
             observations[count, 3] = ut['POSITION'][2]     #y
- #           observations[count, 4] = unit.groundRange
- #           observations[count, 5] = unit.groundATK
- #           observations[count, 6] = unit.max_health/float(20)
- #           observations[count, 7] = unit.orders[0].targetId / float(10)
+            observations[count, 4] = (ut['LAST_POSITION'][0] - ut['POSITION'][0]) / float(ut['TIME'] - ut['LAST_TIME'])
+            observations[count, 5] = (ut['LAST_POSITION'][2] - ut['POSITION'][2]) / float(ut['TIME'] - ut['LAST_TIME'])
             if 'LAST_CMD' not in ut.keys():
-                observations[count, 4] = 0
-                observations[count, 5] = 0
                 observations[count, 6] = 0
+                observations[count, 7] = 0
+                observations[count, 8] = 0
             else:
-                observations[count, 4] = ut['LAST_CMD'][1] / float(45)
-                observations[count, 5] = ut['LAST_CMD'][2] / float(45)
-                observations[count, 6] = ut['LAST_CMD'][0]
+                observations[count, 6] = ut['LAST_CMD'][1] / float(45)
+                observations[count, 7] = ut['LAST_CMD'][2] / float(45)
+                observations[count, 8] = ut['LAST_CMD'][0]
                 #print(uid, ut['LAST_CMD'])
  #           observations[count, 11] = unit.type
  #           observations[count, 12] = unit.velocityX
@@ -220,14 +220,16 @@ class SingleBattleEnv(fc.FPSEnv):
             observations[count, 1] = ut['HEALTH'] / float(50)
             observations[count, 2] = ut['POSITION'][0]  # x
             observations[count, 3] = ut['POSITION'][2]
+            observations[count, 4] = (ut['LAST_POSITION'][0] - ut['POSITION'][0]) / float(ut['TIME'] - ut['LAST_TIME'])
+            observations[count, 5] = (ut['LAST_POSITION'][2] - ut['POSITION'][2]) / float(ut['TIME'] - ut['LAST_TIME'])
             if 'LAST_CMD' not in ut.keys():
-                observations[count, 4] = 0
-                observations[count, 5] = 0
                 observations[count, 6] = 0
+                observations[count, 7] = 0
+                observations[count, 8] = 0
             else:
-                observations[count, 4] = ut['LAST_CMD'][1] / float(45)
-                observations[count, 5] = ut['LAST_CMD'][2] / float(45)
-                observations[count, 6] = ut['LAST_CMD'][0]
+                observations[count, 6] = ut['LAST_CMD'][1] / float(45)
+                observations[count, 7] = ut['LAST_CMD'][2] / float(45)
+                observations[count, 8] = ut['LAST_CMD'][0]
             count += 1
         return np.asarray(observations)
 

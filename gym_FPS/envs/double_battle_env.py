@@ -77,7 +77,7 @@ class doubleBattleEnv(fc.FPSEnv):
         self.init_my_units = self.state['units_myself']
         unit_size = len(self.state['units_myself'])
         unit_size_e = len(self.state['units_enemy'])
-
+        self.add_observer([-220, -1, 20], 2000)
         return self.obs,unit_size,unit_size_e
 
 
@@ -160,10 +160,12 @@ class doubleBattleEnv(fc.FPSEnv):
 
     def _step(self, actions):
         self.episode_steps += 1
-        action = actions[0]
-        action_e = actions[1]
-        commands = self._make_commands(action,'myself')
-        commands_e = self._make_commands(action_e,'enemy')
+        action = actions[0].copy()
+        action_e = actions[1].copy()
+        action[-1] *= np.pi
+        action_e[-1] *= np.pi
+        commands = self._make_commands(action, 'myself')
+        commands_e = self._make_commands(action_e, 'enemy')
         print('commands',commands)
         print('commands_e',commands_e)
         self.current_my_units = copy.deepcopy(self.state['units_myself'])
@@ -179,16 +181,15 @@ class doubleBattleEnv(fc.FPSEnv):
             else:
                 self.states[commands[i][1]]['LAST_CMD']=[1, commands[i][2][0], commands[i][2][2]]
                 self.move(objid_list=[commands[i][1]],destPos=[commands[i][2]],reachDist=0,walkType='run')
-        print(commands_e)
         for i in range(len(commands_e)):
             if commands_e[i][0]==0:
                 print("wrong",commands_e[i][0])
-                unit = self.states[commands[i][2]]
-                self.states[commands[i][1]]['LAST_CMD']=[0, unit['POSITION'][0], unit['POSITION'][2]]
+                unit = self.states[commands_e[i][2]]
+                self.states[commands_e[i][1]]['LAST_CMD']=[0, unit['POSITION'][0], unit['POSITION'][2]]
                 self.set_target_objid(objid_list=[commands_e[i][1]],targetObjID=commands_e[i][2])
                 self.attack(objid_list=[commands_e[i][1]],auth='normal',pos='replace')
             else:
-                self.states[commands[i][1]]['LAST_CMD']=[1, commands[i][2][0], commands[i][2][2]]
+                self.states[commands_e[i][1]]['LAST_CMD']=[1, commands_e[i][2][0], commands_e[i][2][2]]
                 self.move(objid_list=[commands_e[i][1]],destPos=[commands_e[i][2]],reachDist=0,walkType='run')
 
         time.sleep(Config.sleeptime)
@@ -236,14 +237,16 @@ class doubleBattleEnv(fc.FPSEnv):
             observations[count, 1] = ut['HEALTH']/float(50)
             observations[count, 2] = ut['POSITION'][0]     #x
             observations[count, 3] = ut['POSITION'][2]     #y
+            observations[count, 4] = (ut['LAST_POSITION'][0] - ut['POSITION'][0]) / float(ut['TIME'] - ut['LAST_TIME'])
+            observations[count, 5] = (ut['LAST_POSITION'][2] - ut['POSITION'][2]) / float(ut['TIME'] - ut['LAST_TIME'])
             if 'LAST_CMD' not in ut.keys():
-                observations[count, 4] = 0
-                observations[count, 5] = 0
                 observations[count, 6] = 0
+                observations[count, 7] = 0
+                observations[count, 8] = 0
             else:
-                observations[count, 4] = ut['LAST_CMD'][1] / float(45)
-                observations[count, 5] = ut['LAST_CMD'][2] / float(45)
-                observations[count, 6] = ut['LAST_CMD'][0]
+                observations[count, 6] = ut['LAST_CMD'][1] / float(45)
+                observations[count, 7] = ut['LAST_CMD'][2] / float(45)
+                observations[count, 8] = ut['LAST_CMD'][0]
                 #print(uid, ut['LAST_CMD'])
  #           observations[count, 4] = unit.groundRange
  #           observations[count, 5] = unit.groundATK
@@ -258,14 +261,16 @@ class doubleBattleEnv(fc.FPSEnv):
             observations[count, 1] = ut['HEALTH'] / float(50)
             observations[count, 2] = ut['POSITION'][0]  # x
             observations[count, 3] = ut['POSITION'][2]
+            observations[count, 4] = (ut['LAST_POSITION'][0] - ut['POSITION'][0]) / float(ut['TIME'] - ut['LAST_TIME'])
+            observations[count, 5] = (ut['LAST_POSITION'][2] - ut['POSITION'][2]) / float(ut['TIME'] - ut['LAST_TIME'])
             if 'LAST_CMD' not in ut.keys():
-                observations[count, 4] = 0
-                observations[count, 5] = 0
                 observations[count, 6] = 0
+                observations[count, 7] = 0
+                observations[count, 8] = 0
             else:
-                observations[count, 4] = ut['LAST_CMD'][1] / float(45)
-                observations[count, 5] = ut['LAST_CMD'][2] / float(45)
-                observations[count, 6] = ut['LAST_CMD'][0]
+                observations[count, 6] = ut['LAST_CMD'][1] / float(45)
+                observations[count, 7] = ut['LAST_CMD'][2] / float(45)
+                observations[count, 8] = ut['LAST_CMD'][0]
             count += 1
         return np.asarray(observations)
 

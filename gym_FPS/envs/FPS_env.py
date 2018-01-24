@@ -14,10 +14,12 @@ class FPSEnv(gym.Env):
     def __init__(self, ):
         # self.set_env()
         # self.playerai()
-        
-        CONFIG = Config.Config()
-        os.popen(CONFIG.game_dir)
-        time.sleep(CONFIG.wait_for_game_start)
+        try:
+            CONFIG = Config.Config()
+            os.popen(CONFIG.game_dir)
+            time.sleep(CONFIG.wait_for_game_start)
+        except:
+            pass
 
     def _step(self, action):
         raise NotImplementedError
@@ -131,6 +133,7 @@ class FPSEnv(gym.Env):
             states = self.states.copy()
             for key in states.keys():
                 states[key]['LAST_POSITION'] = states[key]['POSITION']
+                states[key]['LAST_TIME'] = states[key]['TIME']
 
             self.client.send('cmd=get_game_variable`objid_list=%s' % (objid_list))
             s = self.client.game_variable
@@ -145,6 +148,7 @@ class FPSEnv(gym.Env):
                     states[int(unit_id)] = dict()
                 for key, value in d.items():
                     states[int(unit_id)][key] = value
+                states[int(unit_id)]['TIME'] = time.time()
                 # 每个队有哪些人
                 try:
                     tid = int(d['TEAM_ID'])
@@ -519,7 +523,7 @@ class FPSEnv(gym.Env):
         '''
         cmd = "cmd=make_action`objid_list=%s`auth=%s`group=group1`pos=%s`ai=" % (list2str(objid_list), auth, pos)
         cmd += '<check name="CheckTimeChk" interval="0"><action name="ShootAct"/><action name="MoveToPosAct" destObj="target" walkType="run"  reachDist="12"/></check>'
-        #print(cmd)
+        # print(cmd)
         self.client.send(cmd)
         # s = self.client.receive()
         return  # s
