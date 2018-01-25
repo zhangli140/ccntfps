@@ -14,6 +14,7 @@ class FPSEnv(gym.Env):
     def __init__(self, ):
         # self.set_env()
         # self.playerai()
+        self.thread_flag = True
         try:
             CONFIG = Config.Config()
             os.popen(CONFIG.game_dir)
@@ -188,7 +189,8 @@ class FPSEnv(gym.Env):
         self.client.game_variable = ''
         self.client.check_pos = ''
         self.client.objid_list = ''
-        if self.episode_id == 1:
+        if self.thread_flag:
+            self.thread_flag = False
             self.t1 = threading.Thread(target=self.get_game_variable)
             self.t1.start()
 
