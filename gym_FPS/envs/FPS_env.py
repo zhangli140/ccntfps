@@ -494,9 +494,9 @@ class FPSEnv(gym.Env):
         2  destObj   target or leader
         3  destPos   目标坐标
         '''
-        if destPos == '' and destObjid == '' and destObj == '':
+        if destPos == '' and destObjId == '' and destObj == '':
             print('need destPos, destObjid or destObj at least one')
-            raise
+            raise ValueError
         if type(objid_list) == int:
             objid_list = list2str([objid_list])
         elif objid_list == 'all':
@@ -734,7 +734,7 @@ class FPSEnv(gym.Env):
         print('cur_pos:123',cur_pos)
         self.origin_ai([uid], move_attack=move_attack)
 
-    def origin_ai(self, objid_list='all', team_id=-1):
+    def origin_ai(self, objid_list='all', team_id=-1, move_attack=True):
         '''
         使用原本ai替换当前ai
         '''
