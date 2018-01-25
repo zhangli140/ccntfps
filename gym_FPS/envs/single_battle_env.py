@@ -128,7 +128,7 @@ class SingleBattleEnv(fc.FPSEnv):
             cx, cy = utils.get_units_center(self.state['units_myself'])
 
         for uid, feats in self.state['units_myself'].items():
-            self.move(objid_list=[uid], destPos=[[cx,-1,cy]], reachDist=0, walkType='run')
+            self.move(objid_list=[uid], destPos=[cx,-1,cy], reachDist=3, walkType='run')
         self._make_feature()
         done = self.state['game_over']
         return done
@@ -152,7 +152,7 @@ class SingleBattleEnv(fc.FPSEnv):
                 self.attack(objid_list=[commands[i][1]],auth='normal',pos='replace')
             else:
                 self.states[commands[i][1]]['LAST_CMD']=[1, commands[i][2][0], commands[i][2][2]]
-                self.move(objid_list=[commands[i][1]],destPos=[commands[i][2]],reachDist=0,walkType='run')
+                self.move(objid_list=[commands[i][1]],destPos=[commands[i][2]],reachDist=3,walkType='run')
 
 
 

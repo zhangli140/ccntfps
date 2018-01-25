@@ -147,10 +147,10 @@ class doubleBattleEnv(fc.FPSEnv):
         cx, cy = utils.get_units_center(self.state['units_myself'])
 
         for uid, feats in self.state['units_myself'].items():
-            self.move(objid_list=[uid], destPos=[[cx_e,-1,cy_e]], reachDist=0, walkType='run')
+            self.move(objid_list=[uid], destPos=[cx_e,-1,cy_e], reachDist=3, walkType='run')
        # count_us = len(self.state['units_myself'])
         for uid, feats in self.state['units_enemy'].items():
-            self.move(objid_list=[uid], destPos=[[cx,-1,cy]], reachDist=0, walkType='run')
+            self.move(objid_list=[uid], destPos=[cx,-1,cy], reachDist=3, walkType='run')
 
         time.sleep(Config.sleeptime)
         self._make_feature()
@@ -180,7 +180,7 @@ class doubleBattleEnv(fc.FPSEnv):
                 self.attack(objid_list=[commands[i][1]],auth='normal',pos='replace')
             else:
                 self.states[commands[i][1]]['LAST_CMD']=[1, commands[i][2][0], commands[i][2][2]]
-                self.move(objid_list=[commands[i][1]],destPos=[commands[i][2]],reachDist=0,walkType='run')
+                self.move(objid_list=[commands[i][1]],destPos=[commands[i][2]],reachDist=3,walkType='run')
         for i in range(len(commands_e)):
             if commands_e[i][0]==0:
                 print("wrong",commands_e[i][0])
@@ -190,7 +190,7 @@ class doubleBattleEnv(fc.FPSEnv):
                 self.attack(objid_list=[commands_e[i][1]],auth='normal',pos='replace')
             else:
                 self.states[commands_e[i][1]]['LAST_CMD']=[1, commands_e[i][2][0], commands_e[i][2][2]]
-                self.move(objid_list=[commands_e[i][1]],destPos=[commands_e[i][2]],reachDist=0,walkType='run')
+                self.move(objid_list=[commands_e[i][1]],destPos=[commands_e[i][2]],reachDist=3,walkType='run')
 
         time.sleep(Config.sleeptime)
         self.time2 = time.time()
