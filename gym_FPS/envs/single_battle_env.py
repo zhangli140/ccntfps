@@ -143,7 +143,7 @@ class SingleBattleEnv(fc.FPSEnv):
         self.current_my_units = copy.deepcopy(self.state['units_myself'])
         self.current_enemy_units = copy.deepcopy(self.state['units_enemy'])
         self.time1 = time.time()
-        print('time1',self.time1,'time2',self.time2,"time gap",self.time1 - self.time2)     #第一次动作执行完到第二次动作开始
+        print('time1',self.time1,'time2',self.time2,"time gap", self.time1 - self.time2)     #第一次动作执行完到第二次动作开始
         for i in range(len(commands)):
             if commands[i][0]==0:
                 unit = self.states[commands[i][2]]

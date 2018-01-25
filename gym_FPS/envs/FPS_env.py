@@ -85,6 +85,7 @@ class FPSEnv(gym.Env):
         self.refs = dict()
         self.mark_id = 0
         self.path_id = 0
+        self.episode_id = 1
 
     def get_objid_list(self, name=1, pos=0):
         '''
@@ -182,7 +183,7 @@ class FPSEnv(gym.Env):
         self.client.send(cmd)
         # s = self.client.receive()
         # self.playerai()
-        time.sleep(1.0)
+        time.sleep(3.0)
         self.states = dict()
         self.client.game_variable = ''
         self.client.check_pos = ''
@@ -225,8 +226,8 @@ class FPSEnv(gym.Env):
         '''
         cmd = 'cmd=common`type=ailogobj`objid=%d' % objid
         self.client.send(cmd)
-        s = self.client.receive()
-        return s
+        #s = self.client.receive()
+        return # s
 
     def make_action(self, d):
         '''

@@ -25,6 +25,9 @@ if not os.path.exists(args.result + '/model'):
     os.mkdir(args.result + '/model')
 if not os.path.exists(args.result + '/model_e'):
     os.mkdir(args.result + '/model_e')
+    
+os.environ["CUDA_DEVICES_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 def wf(str, flag):
     if flag == 0:
