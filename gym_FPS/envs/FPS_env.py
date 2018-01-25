@@ -125,9 +125,7 @@ class FPSEnv(gym.Env):
         值会保存在self.states中
         return dict{id:dict{key:value}}
         '''
-        count111 = 0
         while True:
-            count111 += 1
             team_member = dict()
             objid_list = self.get_objid_list()
             objid_list = get_simple_id_list(objid_list.keys())
@@ -139,9 +137,13 @@ class FPSEnv(gym.Env):
 
             self.client.send('cmd=get_game_variable`objid_list=%s' % (objid_list))
             s = self.client.game_variable
+            count111 = 0
             while len(s) == 0:
                 time.sleep(0.05)
                 s = self.client.game_variable
+                count111 += 1
+                if count111 % 10 == 0:
+                    self.client.send('cmd=get_game_variable`objid_list=%s' % (objid_list))
             for key in states.keys():
                 states[key]['HEALTH'] = 0
             for ss in s.split('`')[1:]:
