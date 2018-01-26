@@ -237,16 +237,18 @@ class doubleBattleEnv(fc.FPSEnv):
             observations[count, 1] = ut['HEALTH']/float(50)
             observations[count, 2] = ut['POSITION'][0]     #x
             observations[count, 3] = ut['POSITION'][2]     #y
-            observations[count, 4] = (ut['LAST_POSITION'][0] - ut['POSITION'][0]) / float(ut['TIME'] - ut['LAST_TIME'])
-            observations[count, 5] = (ut['LAST_POSITION'][2] - ut['POSITION'][2]) / float(ut['TIME'] - ut['LAST_TIME'])
             if 'LAST_CMD' not in ut.keys():
                 observations[count, 6] = 0
                 observations[count, 7] = 0
                 observations[count, 8] = 0
+                observations[count, 4] = 0
+                observations[count, 5] = 0
             else:
                 observations[count, 6] = ut['LAST_CMD'][1] / float(45)
                 observations[count, 7] = ut['LAST_CMD'][2] / float(45)
                 observations[count, 8] = ut['LAST_CMD'][0]
+                observations[count, 4] = (ut['LAST_POSITION'][0] - ut['POSITION'][0]) / float(ut['TIME'] - ut['LAST_TIME'])
+                observations[count, 5] = (ut['LAST_POSITION'][2] - ut['POSITION'][2]) / float(ut['TIME'] - ut['LAST_TIME'])
                 #print(uid, ut['LAST_CMD'])
  #           observations[count, 4] = unit.groundRange
  #           observations[count, 5] = unit.groundATK
@@ -261,16 +263,18 @@ class doubleBattleEnv(fc.FPSEnv):
             observations[count, 1] = ut['HEALTH'] / float(50)
             observations[count, 2] = ut['POSITION'][0]  # x
             observations[count, 3] = ut['POSITION'][2]
-            observations[count, 4] = (ut['LAST_POSITION'][0] - ut['POSITION'][0]) / float(ut['TIME'] - ut['LAST_TIME'])
-            observations[count, 5] = (ut['LAST_POSITION'][2] - ut['POSITION'][2]) / float(ut['TIME'] - ut['LAST_TIME'])
             if 'LAST_CMD' not in ut.keys():
                 observations[count, 6] = 0
                 observations[count, 7] = 0
                 observations[count, 8] = 0
+                observations[count, 4] = 0
+                observations[count, 5] = 0
             else:
                 observations[count, 6] = ut['LAST_CMD'][1] / float(45)
                 observations[count, 7] = ut['LAST_CMD'][2] / float(45)
                 observations[count, 8] = ut['LAST_CMD'][0]
+                observations[count, 4] = (ut['LAST_POSITION'][0] - ut['POSITION'][0]) / float(ut['TIME'] - ut['LAST_TIME'])
+                observations[count, 5] = (ut['LAST_POSITION'][2] - ut['POSITION'][2]) / float(ut['TIME'] - ut['LAST_TIME'])
             count += 1
         return np.asarray(observations)
 
