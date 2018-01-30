@@ -133,7 +133,6 @@ class FPSEnv(gym.Env):
             states = self.states.copy()
             for key in states.keys():
                 states[key]['LAST_POSITION'] = states[key]['POSITION']
-                states[key]['LAST_TIME'] = states[key]['TIME']
 
             self.client.send('cmd=get_game_variable`objid_list=%s' % (objid_list))
             s = self.client.game_variable
@@ -175,7 +174,7 @@ class FPSEnv(gym.Env):
         新的一局 replay_file为回放的文件名
         游戏的speedup请在IsLand.xml中设置
         '''
-        print('new_episode')
+        # print('new_episode')
         self.episode_id += 1
         self.client.notify = []
         self.team_target = dict()

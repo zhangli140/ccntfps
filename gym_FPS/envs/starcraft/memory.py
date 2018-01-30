@@ -1,6 +1,6 @@
 
 class Memory(object):
-    def __init__(self, s,s1 ,a, r, s_,s1_, unit_size, unit_size_):
+    def __init__(self, s, s1 ,a, r, s_,s1_, unit_size, unit_size_):
         self.s = s
         self.s1 = s1
         self.a = a

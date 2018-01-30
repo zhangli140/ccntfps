@@ -26,7 +26,6 @@ class Client(object):
         except:
             print('send failed!!!!!!!!!!!!!!!!!!')
 
-    
     def receive(self, ):
         try:
             receive_buf = ''
@@ -37,12 +36,12 @@ class Client(object):
                 count += 1
                 if 10 == st[-1]:
                     flag = False
-                st=base64.b64decode(st).decode()
+                st = base64.b64decode(st).decode()
                 receive_buf += st
             if receive_buf[-1] == '`':
                 receive_buf = receive_buf[:-1]
             if self.DEBUG:
-                print('receive:',receive_buf)
+                print('receive:', receive_buf)
                 print(count)
 
             if receive_buf.find('notify') > -1:

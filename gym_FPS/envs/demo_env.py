@@ -1,10 +1,9 @@
 # coding: utf-8
 
-import math, time, random
+import time, random
 import numpy as np
 from gym import spaces
 from .import FPS_env as fps
-from copy import deepcopy
 
 from ..utils import *
 
@@ -14,7 +13,7 @@ class DemoEnv(fps.FPSEnv):
         self.target_mapid = [0, 0]
         self.is_battle = False
         self.enemy_nearby = dict()
-        self.t=time.time()
+        self.t = time.time()
 
 
     def _step(self, action):

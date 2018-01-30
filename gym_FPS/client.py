@@ -33,7 +33,8 @@ class Client(object):
             if self.DEBUG:
                 print('send over:%s'%cmd)
         except:
-            print('send failed!!!!!!!!!!!!!!!!!!')
+            if self.DEBUG:
+                print('send failed!!!!!!!!!!!!!!!!!!')
 
     
     def receive(self, ):

@@ -44,8 +44,8 @@ class doubleBattleEnv(fc.FPSEnv):
     def _observation_space(self):
         # hit points, cooldown, ground range, is enemy, degree, distance (myself)
         # hit points, cooldown, ground range, is enemy (enemy)
-        obs_low = np.zeros([1,10])
-        obs_high = (np.zeros([1,10])+1)*100
+        obs_low = np.zeros([1, 10])
+        obs_high = (np.zeros([1, 10]) + 1) * 100
         return spaces.Box(np.array(obs_low), np.array(obs_high))
 
 
@@ -55,8 +55,8 @@ class doubleBattleEnv(fc.FPSEnv):
         self.flag = 0
         self.new_episode()
         self.state['game_over'] = False
-        self.state['win'] =False
-        while(len(self.states) == 0):
+        self.state['win'] = False
+        while len(self.states) == 0:
             time.sleep(0.1)          # 等待主角出现
 
         self.add_obj(name="敌人1", is_enemy=True, pos=[-212.5, -1, -26.7], leader_objid=-1, team_id=-1)
@@ -73,17 +73,17 @@ class doubleBattleEnv(fc.FPSEnv):
 
         time.sleep(Config.sleeptime)
         self._make_feature()
-        self.obs =self._make_observation()
+        self.obs = self._make_observation()
         self.init_my_units = self.state['units_myself']
         unit_size = len(self.state['units_myself'])
         unit_size_e = len(self.state['units_enemy'])
         self.add_observer([-220, -1, 20], 2000)
-        return self.obs,unit_size,unit_size_e
+        return self.obs, unit_size, unit_size_e
 
 
 
 
-    def _make_commands(self, action,flag):
+    def _make_commands(self, action, flag):
         cmds = []
         self.current_my_units = self.state['units_myself']
         self.current_enemy_units = self.state['units_enemy']
@@ -102,8 +102,8 @@ class doubleBattleEnv(fc.FPSEnv):
                     degree = action[i][1]
                     distance = (action[i][2] + 1) * DISTANCE_FACTOR
                     x2, y2 = utils.get_position(degree, distance, myself['POSITION'][0], myself['POSITION'][2])
-                    enemy_id,distance = utils.get_closest(x2, y2, self.state['units_enemy'])
-                    cmds.append([0,uid,enemy_id])
+                    enemy_id, distance = utils.get_closest(x2, y2, self.state['units_enemy'])
+                    cmds.append([0, uid, enemy_id])
                 else:
                     # Move action
                     if myself is None:
@@ -111,7 +111,7 @@ class doubleBattleEnv(fc.FPSEnv):
                     degree = action[i][1]
                     distance = (action[i][2] + 1) * DISTANCE_FACTOR
                     x2, y2 = utils.get_position(degree, distance, myself['POSITION'][0], myself['POSITION'][2])
-                    cmds.append([1,uid,[x2,-1,y2]])
+                    cmds.append([1, uid, [x2, -1, y2]])
                 i += 1
         else:
             if len(action) is not len(self.state['units_enemy']):
@@ -126,8 +126,8 @@ class doubleBattleEnv(fc.FPSEnv):
                     degree = action[i][1]
                     distance = (action[i][2] + 1) * DISTANCE_FACTOR
                     x2, y2 = utils.get_position(degree, distance, myself['POSITION'][0], myself['POSITION'][2])
-                    enemy_id,distance = utils.get_closest(x2, y2, self.state['units_myself'])
-                    cmds.append([0,uid,enemy_id])
+                    enemy_id, distance = utils.get_closest(x2, y2, self.state['units_myself'])
+                    cmds.append([0, uid, enemy_id])
                 else:
                     # Move action
                     if myself is None:
@@ -135,7 +135,7 @@ class doubleBattleEnv(fc.FPSEnv):
                     degree = action[i][1]
                     distance = (action[i][2] + 1) * DISTANCE_FACTOR
                     x2, y2 = utils.get_position(degree, distance, myself['POSITION'][0], myself['POSITION'][2])
-                    cmds.append([1,uid,[x2,-1,y2]])
+                    cmds.append([1, uid, [x2, -1, y2]])
                 i += 1
 
         # print "commands send!"
@@ -147,10 +147,10 @@ class doubleBattleEnv(fc.FPSEnv):
         cx, cy = utils.get_units_center(self.state['units_myself'])
 
         for uid, feats in self.state['units_myself'].items():
-            self.move(objid_list=[uid], destPos=[cx_e,-1,cy_e], reachDist=3, walkType='run')
+            self.move(objid_list=[uid], destPos=[cx_e, -1, cy_e], reachDist=3, walkType='run')
        # count_us = len(self.state['units_myself'])
         for uid, feats in self.state['units_enemy'].items():
-            self.move(objid_list=[uid], destPos=[cx,-1,cy], reachDist=3, walkType='run')
+            self.move(objid_list=[uid], destPos=[cx, -1, cy], reachDist=3, walkType='run')
 
         time.sleep(Config.sleeptime)
         self._make_feature()
@@ -166,43 +166,43 @@ class doubleBattleEnv(fc.FPSEnv):
         action_e[-1] *= np.pi
         commands = self._make_commands(action, 'myself')
         commands_e = self._make_commands(action_e, 'enemy')
-        print('commands',commands)
-        print('commands_e',commands_e)
+        print('commands', commands)
+        print('commands_e', commands_e)
         self.current_my_units = copy.deepcopy(self.state['units_myself'])
         self.current_enemy_units = copy.deepcopy(self.state['units_enemy'])
         self.time1 = time.time()
-        print('time1',self.time1,'time2',self.time2,"time gap",self.time1 - self.time2)     #第一次动作执行完到第二次动作开始
+        print('time1', self.time1, 'time2', self.time2, "time gap", self.time1 - self.time2)     #第一次动作执行完到第二次动作开始
         for i in range(len(commands)):
-            if commands[i][0]==0:
+            if commands[i][0] == 0:
                 unit = self.states[commands[i][2]]
                 self.states[commands[i][1]]['LAST_CMD']=[0, unit['POSITION'][0], unit['POSITION'][2]]
-                self.set_target_objid(objid_list=[commands[i][1]],targetObjID=commands[i][2])
-                self.attack(objid_list=[commands[i][1]],auth='normal',pos='replace')
+                self.set_target_objid(objid_list=[commands[i][1]], targetObjID=commands[i][2])
+                self.attack(objid_list=[commands[i][1]], auth='normal', pos='replace')
             else:
-                self.states[commands[i][1]]['LAST_CMD']=[1, commands[i][2][0], commands[i][2][2]]
-                self.move(objid_list=[commands[i][1]],destPos=[commands[i][2]],reachDist=3,walkType='run')
+                self.states[commands[i][1]]['LAST_CMD'] = [1, commands[i][2][0], commands[i][2][2]]
+                self.move(objid_list=[commands[i][1]], destPos=[commands[i][2]], reachDist=3, walkType='run')
         for i in range(len(commands_e)):
-            if commands_e[i][0]==0:
-                print("wrong",commands_e[i][0])
+            if commands_e[i][0] == 0:
+                print("wrong", commands_e[i][0])
                 unit = self.states[commands_e[i][2]]
-                self.states[commands_e[i][1]]['LAST_CMD']=[0, unit['POSITION'][0], unit['POSITION'][2]]
-                self.set_target_objid(objid_list=[commands_e[i][1]],targetObjID=commands_e[i][2])
-                self.attack(objid_list=[commands_e[i][1]],auth='normal',pos='replace')
+                self.states[commands_e[i][1]]['LAST_CMD'] = [0, unit['POSITION'][0], unit['POSITION'][2]]
+                self.set_target_objid(objid_list=[commands_e[i][1]], targetObjID=commands_e[i][2])
+                self.attack(objid_list=[commands_e[i][1]], auth='normal', pos='replace')
             else:
-                self.states[commands_e[i][1]]['LAST_CMD']=[1, commands_e[i][2][0], commands_e[i][2][2]]
-                self.move(objid_list=[commands_e[i][1]],destPos=[commands_e[i][2]],reachDist=3,walkType='run')
+                self.states[commands_e[i][1]]['LAST_CMD'] = [1, commands_e[i][2][0], commands_e[i][2][2]]
+                self.move(objid_list = [commands_e[i][1]], destPos=[commands_e[i][2]], reachDist=3, walkType='run')
 
         time.sleep(Config.sleeptime)
         self.time2 = time.time()
         self._make_feature()
         self.obs = self._make_observation()
         reward = self._compute_reward()
-        print('reward',reward)
+        print('reward', reward)
         done = self.state['game_over']
         unit_size = len(self.state['units_myself'])
         unit_size_e = len(self.state['units_enemy'])
-        print(unit_size,unit_size_e)
-        return self.obs,reward,done,unit_size,unit_size_e
+        print(unit_size, unit_size_e)
+        return self.obs, reward, done, unit_size, unit_size_e
 
 
 

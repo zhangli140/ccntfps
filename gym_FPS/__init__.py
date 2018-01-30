@@ -22,7 +22,7 @@ register(
     entry_point='gym_FPS:doubleBattleEnv')
 register(
     id='FPSSingle-v0',
-    entry_point='gym_FPS:singleBattleEnv')
+    entry_point='gym_FPS:SingleBattleEnv')
 register(
     id='FPSMap-v0',
     entry_point='gym_FPS:MapEnv')

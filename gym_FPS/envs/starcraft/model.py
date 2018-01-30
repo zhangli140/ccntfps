@@ -19,25 +19,25 @@ REPLAY_START_SIZE=CONFIG.replay_start_size
 
 
 class DDPG(object):
-    def __init__(self,sess, a_dim, s_dim, a_bound, actor, critic):
+    def __init__(self, sess, a_dim, s_dim, a_bound, actor, critic):
         self.memory = np.zeros((MEMORY_CAPACITY), dtype=object)
         self.pointer = 0
         self.sess = sess
         self.a_replace_counter, self.c_replace_counter = 0, 0
         self.a_dim, self.s_dim, self.a_bound = a_dim, s_dim, a_bound,
         self.S = tf.placeholder(tf.float32, [None, s_dim], 's')
-        self.S1 = tf.placeholder(tf.float32,[None,s_dim],'s1')
+        self.S1 = tf.placeholder(tf.float32, [None, s_dim], 's1')
         self.global_step = tf.Variable(0, trainable=False)
         self.S_ = tf.placeholder(tf.float32, [None, s_dim], 's_')
-        self.S1_ = tf.placeholder(tf.float32,[None,s_dim],'S1_')
+        self.S1_ = tf.placeholder(tf.float32, [None, s_dim], 'S1_')
         self.R = tf.placeholder(tf.float32, [None, 1], 'r')
         self.unit_size = tf.placeholder(tf.int32, name='unit_size')
         self.unit_size_ = tf.placeholder(tf.int32, name='unit_size_')
         self.variable_summaries('reward', self.R)
         with tf.variable_scope(actor):
-            self.a = self._build_a(self.S, self.S1,scope='eval', trainable=True, unit_size=self.unit_size)
+            self.a = self._build_a(self.S, self.S1, scope='eval', trainable=True, unit_size=self.unit_size)
             self.variable_summaries('eval_a', self.a)
-            a_ = self._build_a(self.S_, self.S1_,scope='target', trainable=False, unit_size=self.unit_size_)
+            a_ = self._build_a(self.S_, self.S1_, scope='target', trainable=False, unit_size=self.unit_size_)
             self.variable_summaries('target_a', a_)
         with tf.variable_scope(critic):
             # assign self.a = a in memory when calculating q for td_error,
@@ -105,19 +105,19 @@ class DDPG(object):
             self.sess.run([tf.assign(t, e) for t, e in zip(self.ct_params, self.ce_params)])
         self.a_replace_counter += 1
         self.c_replace_counter += 1
-        if self.pointer>=MEMORY_CAPACITY:
+        if self.pointer >= MEMORY_CAPACITY:
             indices = np.random.choice(MEMORY_CAPACITY, size=BATCH_SIZE)
-        elif self.pointer>=REPLAY_START_SIZE:
-            indices = np.random.choice(self.pointer,size=BATCH_SIZE)#改为从start开始学
+        elif self.pointer >= REPLAY_START_SIZE:
+            indices = np.random.choice(self.pointer, size=BATCH_SIZE)#改为从start开始学
         else:
-            print ("replay_start_size is smaller than batch_size!")
+            print("replay_start_size is smaller than batch_size!")
             return
         bt = self.memory[indices]
         for i in range(bt.size): #原来是这个for循环大大增加了运行时间。
-            self.sess.run([self.atrain], {self.S: bt[i].s,self.S1:bt[i].s1,
-                                        self.unit_size: bt[i].unit_size})
+            self.sess.run([self.atrain], {self.S:bt[i].s, self.S1:bt[i].s1,
+                                        self.unit_size:bt[i].unit_size})
             reward = np.array(bt[i].r).reshape((-1, 1))#这里张煜reshape了一下。其实不仅reward要reshape，state最好也要reshape
-            summary,_ = self.sess.run([self.merged_summary_op,self.ctrain], {self.S: bt[i].s, self.S1:bt[i].s1,
+            summary, _ = self.sess.run([self.merged_summary_op, self.ctrain], {self.S: bt[i].s, self.S1:bt[i].s1,
                                                                                self.a: bt[i].a,
                                                                                self.R: reward, self.S_: bt[i].s_,
                                                                                self.S1_:bt[i].s1_,
@@ -126,7 +126,7 @@ class DDPG(object):
 #            self.summary_writer.add_summary(summary, self.sess.run(self.global_step))
 
     def store_transition(self, s, s1, a, r, s_, s1_, unit_size, unit_size_):
-        mymemory = Memory(s,s1, a, r, s_,s1_, unit_size,unit_size_)
+        mymemory = Memory(s, s1, a, r, s_, s1_, unit_size, unit_size_)
         index = self.pointer % MEMORY_CAPACITY  # replace the old memory with new memory
         self.memory[index] = mymemory
         self.pointer += 1
@@ -141,10 +141,10 @@ class DDPG(object):
             x1 = tf.nn.elu(tf.matmul(s1, w1) + b1)
             mean_pool = tf.reduce_mean(x, axis=0)
             max_pool = tf.reduce_max(x, axis=0)
-            feature = tf.concat([ mean_pool, max_pool], axis=0)
+            feature = tf.concat([mean_pool, max_pool], axis=0)
             feature = tf.reshape(feature, [1, 4 * CONFIG.hidden_size])
             feature = tf.multiply(feature, tf.zeros([unit_size, 1]) + 1)  # unit_size,4*config.hidden_size
-            feature = tf.concat([x1,feature], axis = 1)
+            feature = tf.concat([x1, feature], axis=1)
             final_feature = tf.reshape(feature, [1, unit_size, 6 * CONFIG.hidden_size])
 
             cell = tf.contrib.rnn.BasicLSTMCell(num_units=CONFIG.hidden_size)
@@ -169,7 +169,7 @@ class DDPG(object):
             x = tf.nn.elu(tf.matmul(s, w1) + b1)  # [unit_size+enemy_size,10*hidden_size]
             mean_pool = tf.reduce_mean(x, axis=0)
             max_pool = tf.reduce_max(x, axis=0)
-            feature = tf.concat([mean_pool, max_pool],axis=0)
+            feature = tf.concat([mean_pool, max_pool], axis=0)
             feature = tf.reshape(feature, [1, 4 * CONFIG.hidden_size])
             feature = tf.multiply(feature, tf.zeros([unit_size, 1]) + 1)  # unit_size,4*config.hidden_size
             action_and_q = tf.concat([a, feature], axis=1)  # unit_size,4*config.hidden_size+3

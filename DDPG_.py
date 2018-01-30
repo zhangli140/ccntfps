@@ -2,10 +2,10 @@
 
 import numpy as np
 import gym_FPS
-from gym_FPS.envs.starcraft.Config import *
+from gym_FPS.envs.starcraft.Config import Config
 import argparse
 import pickle
-from gym_FPS.envs.starcraft.model import *
+from gym_FPS.envs.starcraft.model import DDPG
 import tensorflow as tf
 import pylab
 import time
@@ -25,7 +25,7 @@ if not os.path.exists(args.result + '/model'):
     os.mkdir(args.result + '/model')
 if not os.path.exists(args.result + '/model_e'):
     os.mkdir(args.result + '/model_e')
-    
+
 os.environ["CUDA_DEVICES_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -118,7 +118,7 @@ if __name__ == '__main__':
     ddpg = DDPG(sess, a_dim, s_dim, a_bound, 'Actor', 'Critic')
     ddpg_e = DDPG(sess, a_dim, s_dim, a_bound, 'Actor_e', 'Critic_e')
     if CONFIG.load == 1:
-        print ("OLD VAR LOADED")
+        print("OLD VAR LOADED")
         ckpt = tf.train.get_checkpoint_state(args.result + '/model')
         ckpt_e = tf.train.get_checkpoint_state(args.result + '/model_e')
         if ckpt and ckpt.model_checkpoint_path:
@@ -148,25 +148,32 @@ if __name__ == '__main__':
         unatural_flag = False
         while not done:
             unatural = maxmin_distance(env.state['units_myself'], env.state['units_enemy'])
-            if unatural or unatural_flag:
-                done = env.die_fast()
+            if unatural or unatural_flag and current_step != 0:
+#                done = env.die_fast()
                 unatural_flag = True
+                epi_flag = False
                 print("unatural")
+                break
+            elif current_step == 0:
+                print("unatural first step")
+                time.sleep(2)
+                epi_flag = False
                 continue
             if current_step >= 800:
                 env.restart()
+                print("restart")
                 epi_flag = False
                 break
             action, s, s1 = get_action(s, unit_size, 'myself')
             action_e, s, s1_e = get_action(s, e_unit_size, 'enemy')
-            s_, reward, done, unit_size_, e_unit_size_= env.step([action, action_e])    #   执行完动作后的时间，time2
+            s_, reward, done, unit_size_, e_unit_size_ = env.step([action, action_e])#执行完动作后的时间，time2
 
-            s_ , s1_= get_next_feature(s_, unit_size_, 'myself')
+            s_, s1_ = get_next_feature(s_, unit_size_, 'myself')
             s_, s1_e_ = get_next_feature(s_, e_unit_size_, 'enemy')
             if reward is not None:
                 rewards.append(reward)
-                store(state=s, s1 = s1, action=action, total_reward=reward, state_=s_, s1_ = s1_, unit_size=unit_size, unit_size_ = unit_size_,flag = 'myself')
-                store(state=s, s1 = s1_e, action = action_e, total_reward = -reward, state_ = s_, s1_ = s1_e, unit_size = e_unit_size, unit_size_ = e_unit_size_,flag = 'enemy')
+                store(state=s, s1=s1, action=action, total_reward=reward, state_=s_, s1_=s1_, unit_size=unit_size, unit_size_=unit_size_, flag='myself')
+                store(state=s, s1=s1_e, action=action_e, total_reward=-reward, state_=s_, s1_=s1_e, unit_size=e_unit_size, unit_size_=e_unit_size_, flag='enemy')
 
             var *= 0.9999
             s = s_
@@ -177,7 +184,7 @@ if __name__ == '__main__':
 
             current_step += 1
             if reward is not None:
-                cumulative_reward+=reward
+                cumulative_reward += reward
         if epi_flag:
             episodes += 1
             if bool(env.state['battle_won']):
@@ -187,10 +194,10 @@ if __name__ == '__main__':
                 ddpg_e.learn()
             wf(str(battles_won) + '\n' + str(episodes), 0)
             wf(str(np.mean(rewards)) + '\n' + str(episodes), 1)
-            print ('episodes:', episodes, ', win:', battles_won, ', mean_reward:', np.mean(rewards))
+            print('episodes:', episodes, ', win:', battles_won, ', mean_reward:', np.mean(rewards))
             if episodes % CONFIG.episode_to_reset_win == 0:
                 win_rate[episodes] = battles_won / CONFIG.episode_to_reset_win
-                print ('win rate:', win_rate[episodes])
+                print('win rate:', win_rate[episodes])
                 battles_won = 0
 
 

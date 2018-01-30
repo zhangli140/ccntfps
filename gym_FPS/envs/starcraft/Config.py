@@ -10,9 +10,9 @@ class Config(object):
     speed = cf.getfloat('fps', 'speed')
     frame_skip = cf.getint('fps', 'frame_skip')
     sleeptime = cf.getfloat('fps', 'sleeptime')
-    max_dist = cf.getfloat('fps','max_dist')
+    max_dist = cf.getfloat('fps', 'max_dist')
     try:
-        game_dir = cf.get('fps','game_dir')
+        game_dir = cf.get('fps', 'game_dir')
         wait_for_game_start = cf.getfloat('fps', 'wait_for_game_start')
     except:
         pass
@@ -31,7 +31,7 @@ class Config(object):
     memory_capacity = cf.getint('model', 'memory_capacity')
     batch_size = cf.getint('model', 'batch_size')
     enemy_num = cf.getint('model', 'enemy_num')
-    replay_start_size=cf.getint('model','reply_start_size')
+    replay_start_size = cf.getint('model', 'reply_start_size')
 
     episode_to_save = cf.getint('utils', 'episode_to_save')
     episode_to_reset_win = cf.getint('utils', 'episode_to_reset_win')
@@ -41,7 +41,7 @@ class Config(object):
     model_dir = cf.get('utils', 'model_dir')
     summary_dir = cf.get('utils', 'summary_dir')
     memory_dir = cf.get('utils', 'memory_dir')
-    net_output_dir = cf.get('utils','net_outputdir')
+    net_output_dir = cf.get('utils', 'net_outputdir')
 
 
 if __name__ == '__main__':
