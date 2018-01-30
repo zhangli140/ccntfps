@@ -67,17 +67,23 @@ class SingleBattleEnv(fc.FPSEnv):
         while len(self.states) == 0:
             time.sleep(0.1)          # 等待主角出现
 
-        self.add_obj(name="敌人1", is_enemy=True, pos=[-212.5, -1, -26.7], leader_objid=-1, team_id=-1)
-        self.add_obj(name="敌人2", is_enemy=True, pos=[-210.8, -1, -27.8], leader_objid=-1, team_id=-1)
-        self.add_obj(name="敌人3", is_enemy=True, pos=[-208.9, -1, -28.2], leader_objid=-1, team_id=-1)
-        self.add_obj(name="敌人4", is_enemy=True, pos=[-206.3, -1, -29.1], leader_objid=-1, team_id=-1)
-        self.add_obj(name="敌人5", is_enemy=True, pos=[-204.3, -1, -29.5], leader_objid=-1, team_id=-1)
+        if np.random.random() < 0.5:
+            flag = 0
+        else:
+            flag = 1
 
-        self.add_obj(name="队友1", is_enemy=False, pos=[-190, -1, -13.5], leader_objid=-1, team_id=-1)
-        self.add_obj(name="队友2", is_enemy=False, pos=[-191, -1, -14.0], leader_objid=-1, team_id=-1)
-        self.add_obj(name="队友3", is_enemy=False, pos=[-193, -1, -13.6], leader_objid=-1, team_id=-1)
-        self.add_obj(name="队友4", is_enemy=False, pos=[-195, -1, -13.0], leader_objid=-1, team_id=-1)
-        self.add_obj(name="队友5", is_enemy=False, pos=[-197, -1, -12.3], leader_objid=-1, team_id=-1)
+        names = ['队友', '敌人']
+        self.add_obj(name="%s1"%names[flag], is_enemy=bool(flag), pos=[-212.5, -1, -26.7], leader_objid=-1, team_id=2-3*flag)
+        self.add_obj(name="%s2"%names[flag], is_enemy=bool(flag), pos=[-210.8, -1, -27.8], leader_objid=-1, team_id=2-3*flag)
+        self.add_obj(name="%s3"%names[flag], is_enemy=bool(flag), pos=[-208.9, -1, -28.2], leader_objid=-1, team_id=2-3*flag)
+        self.add_obj(name="%s4"%names[flag], is_enemy=bool(flag), pos=[-206.3, -1, -29.1], leader_objid=-1, team_id=2-3*flag)
+        self.add_obj(name="%s5"%names[flag], is_enemy=bool(flag), pos=[-204.3, -1, -29.5], leader_objid=-1, team_id=2-3*flag)
+
+        self.add_obj(name="%s1"%names[1-flag], is_enemy=bool(1-flag), pos=[-190, -1, -13.5], leader_objid=-1, team_id=2-3*flag)
+        self.add_obj(name="%s2"%names[1-flag], is_enemy=bool(1-flag), pos=[-191, -1, -14.0], leader_objid=-1, team_id=2-3*flag)
+        self.add_obj(name="%s3"%names[1-flag], is_enemy=bool(1-flag), pos=[-193, -1, -13.6], leader_objid=-1, team_id=2-3*flag)
+        self.add_obj(name="%s4"%names[1-flag], is_enemy=bool(1-flag), pos=[-195, -1, -13.0], leader_objid=-1, team_id=2-3*flag)
+        self.add_obj(name="%s5"%names[1-flag], is_enemy=bool(1-flag), pos=[-197, -1, -12.3], leader_objid=-1, team_id=2-3*flag)
 
         time.sleep(Config.sleeptime)
         self._make_feature()
