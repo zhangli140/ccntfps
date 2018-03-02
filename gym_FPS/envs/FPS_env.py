@@ -6,7 +6,7 @@ import gym
 import time, os
 
 from ..utils import *
-from ..client import *
+from ..client import Client
 from .starcraft import Config
 
 
@@ -169,7 +169,7 @@ class FPSEnv(gym.Env):
             time.sleep(0.1)
         return  # self.states
 
-    def new_episode(self, save=1, replay_file=None, speedup=1, disablelog=0):
+    def new_episode(self, save=1, replay_file=None, speedup=1, disablelog=0, scene_name='Simple'):
         '''
         新的一局 replay_file为回放的文件名
         游戏的speedup请在IsLand.xml中设置
@@ -179,7 +179,7 @@ class FPSEnv(gym.Env):
         self.client.notify = []
         self.team_target = dict()
         # cmd = 'cmd=new_episode'
-        cmd = 'cmd=new_episode`episode_id=%d`save=%d`disablelog=%d' % (self.episode_id, save, disablelog)
+        cmd = 'cmd=new_episode`episode_id=%d`save=%d`disablelog=%d`scene_name=%s' % (self.episode_id, save, disablelog, scene_name)
         if str == type(replay_file):
             cmd += '`replay_file=%s' % replay_file
         self.client.send(cmd)
@@ -509,9 +509,9 @@ class FPSEnv(gym.Env):
         cmd += '`auth=%s`group=%s`pos=%s`ai=' % (auth, group, pos)
         cmd += '<check name="CheckTimeChk" interval="0">'
         cmd += '<check name="SearchEnemyAct"><action name="ShootAct"/>'  # shootcd 将在下个版本中生效
-        cmd += '<action name="MoveToPosAct" destObj="target" walkType="run"  reachDist="6"/></check>'
+        cmd += '<action name="MoveToPosAct" destObj="target" walkType="run" reachDist="6"/></check>'
         # cmd += "<check name='CanAttackTargetAct'><action name='ShootAct'/></check>"
-        cmd += '<action name="MoveToPosAct" destObjID="%s" destObj="%s" destPos="%s"  walkType="%s"  reachDist="%d"/></check>' % (
+        cmd += '<action name="MoveToPosAct" destObjID="%s" destObj="%s" destPos="%s" walkType="%s"  reachDist="%d"/></check>' % (
             destObjID, destObj, list2str(destPos), walkType, reachDist)
         if self.DEBUG:
             print(destPos)
