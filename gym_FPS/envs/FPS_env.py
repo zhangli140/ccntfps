@@ -3,7 +3,7 @@
 import numpy as np
 import math, random, threading
 import gym
-import time, os
+import time, os, json, copy
 
 from ..utils import *
 from ..client import Client
@@ -20,7 +20,7 @@ class FPSEnv(gym.Env):
             os.popen(CONFIG.game_dir)
             time.sleep(CONFIG.wait_for_game_start)
         except:
-            pass
+            print('自动打开失败')
 
     def _step(self, action):
         raise NotImplementedError
@@ -130,7 +130,7 @@ class FPSEnv(gym.Env):
             objid_list = self.get_objid_list()
             objid_list = get_simple_id_list(objid_list.keys())
 
-            states = self.states.copy()
+            states = copy.deepcopy(self.states)
             for key in states.keys():
                 states[key]['LAST_POSITION'] = states[key]['POSITION']
 
@@ -194,6 +194,8 @@ class FPSEnv(gym.Env):
             self.thread_flag = False
             self.t1 = threading.Thread(target=self.get_game_variable)
             self.t1.start()
+            self.t2 = threading.Thread(target=self._wait_for_open_panel)
+            self.t2.start()
 
         # self.get_game_variable()
         # if s.find('success')==-1:
@@ -238,7 +240,8 @@ class FPSEnv(gym.Env):
         做一个自定义动作
         '''
         if dict == type(d):
-            s = get_action(d)
+            #s = get_action(d)
+            pass
         else:
             s = d
         cmd = 'cmd=make_action`' + s
@@ -493,7 +496,7 @@ class FPSEnv(gym.Env):
         2  destObj   target or leader
         3  destPos   目标坐标
         '''
-        if destPos == '' and destObjId == '' and destObj == '':
+        if destPos == '' and destObjID == '' and destObj == '':
             print('need destPos, destObjid or destObj at least one')
             raise ValueError
         if type(objid_list) == int:
@@ -532,15 +535,65 @@ class FPSEnv(gym.Env):
         # s = self.client.receive()
         return  # s
 
-    def set_target_objid(self, objid_list, targetObjID, auth='normal'):
+    def set_target_objid(self, objid_list, targetObjID, auth='replace'):
         '''
         强行指定攻击目标 还需再调attack才会攻击
         '''
-        cmd = "cmd=make_action`objid_list=%s`auth=%s`group=group1`pos=head`ai=" % (list2str(objid_list), auth)
-        cmd += "<action name='SetTargetAct' targetObjID='%d'/>" % targetObjID
+        #cmd = "cmd=make_action`objid_list=%s`auth=%s`group=group1`pos=head`ai=" % (list2str(objid_list), auth)
+        #cmd += "<action name='SetTargetAct' targetObjID='%d'/>" % targetObjID
+        cmd = 'cmd=set_target`obj_id=%s`target_id=%d' % (list2str(objid_list), targetObjID)
         self.client.send(cmd)
         # s = self.client.receive()
         return  # s
+
+    def add_strategy(self, strategy1, strategy2, d):
+        '''
+        d={'Items': []}  #init
+        strategy1:str
+        strategy2:list
+        '''
+        d2={'Items': [{'value':s} for s in strategy2], 'value':strategy1}
+        d['Items'].append(d2)
+
+    def _wait_for_open_panel(self,):
+        while True:
+            s=self.client.strategy_open
+            if len(s)>0:
+                #TODO
+                print('receive open')
+                d={'Items': []}
+                self.add_strategy('进攻',['text00','text01'],d)
+                self.add_strategy('撤退',['text10','text11','text12'],d)
+                self.add_strategy('333',['text20','text21','text22'],d)
+                self.open_strategy_panel(d)
+
+                self.client.strategy_open=''
+
+    def open_strategy_panel(self, d):
+        '''
+        在战术面板上显示指令
+        '''
+        cmd='cmd=strategy`dict=%s'%(json.dumps(d, ensure_ascii=False))
+        self.client.send(cmd)
+        threading.Thread(target=self._wait_for_strategy, args=(d,10)).start()
+
+    def _wait_for_strategy(self, d, t):
+        '''
+        等待战术选择
+        d:战术字典
+        t:最大等待时间
+        '''
+        while len(self.client.strategy_select)<1:
+            time.sleep(1)
+            t-=1
+            if t<0:
+                print('timeout!!!!')
+                return None, None
+        s=self.client.strategy_select
+        self.client.strategy_select=''
+        l=s.split(':')
+        print('strategy:',s)
+        return s, d['Items'][int(l[0])]['Items'][int(l[1])]
 
     def get_enemy_nearby(self, team_id=1, mindis=30):
         '''
@@ -562,7 +615,7 @@ class FPSEnv(gym.Env):
 
         return enemy_nearby
 
-    def map_move(self, target_map_pos, objid_list='all', team_id=None, can_attack=True):
+    def map_move(self, target_map_pos, objid_list='all', team_id=None, can_attack=True, walkType='walk'):
         '''
         按照5*5坐标移动
         '''
@@ -577,10 +630,10 @@ class FPSEnv(gym.Env):
         map_pos[1][4] = [-180, -1, 120]
 
         if can_attack:
-            s = self.can_attack_move(objid_list=objid_list, team_id=team_id,
+            s = self.can_attack_move(objid_list=objid_list, team_id=team_id, walkType=walkType,
                                      destPos=map_pos[target_map_pos[0]][target_map_pos[1]], )
         else:
-            s = self.move(objid_list=objid_list, team_id=team_id,
+            s = self.move(objid_list=objid_list, team_id=team_id, walkType=walkType,
                           destPos=map_pos[target_map_pos[0]][target_map_pos[1]], )
 
             # return s
