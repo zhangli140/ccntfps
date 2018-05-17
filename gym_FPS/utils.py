@@ -82,17 +82,17 @@ def get_weakest(enemies):
 
 def save(episodes, agent, avg_rewards, episode_record,
          avg_loss, loss_sum, win_rate, battles_won, win_episode):
-    if episodes % CONFIG.episode_to_save_reward == 0 and episodes != 0:
+    if episodes % CONFIG.episode_to_save == 0 and episodes != 0:
         dumpReward(avg_rewards, episode_record, 'reward' + str(episodes) + '.pkl')
         dumpLoss(avg_loss, loss_sum, episode_record, 'loss' + str(episodes) + '.pkl')
-        win_rate.append(battles_won / CONFIG.episode_to_save_reward)
+        win_rate.append(battles_won / CONFIG.episode_to_save)
         win_episode.append(episodes)
         battles_won = 0
 
-    if episodes % CONFIG.episode_to_save_win == 0 and episodes != 0:
+    if episodes % CONFIG.episode_to_save == 0 and episodes != 0:
         dumpWin(win_rate, win_episode, 'win' + str(episodes) + '.pkl')
 
-    if episodes % CONFIG.episode_to_save_model == 0 and episodes != 0:
+    if episodes % CONFIG.episode_to_save == 0 and episodes != 0:
         agent.saver.save(agent.sess, CONFIG.model_dir + 'model.ckpt', global_step=episodes)
     return battles_won
 

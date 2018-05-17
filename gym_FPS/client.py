@@ -14,6 +14,9 @@ class Client(object):
         self.DEBUG = DEBUG
         self.receive_buf = b''
         self.notify = []
+        self.strategy_open = ''
+        self.strategy_select = ''
+        self.confirm = ''
         self.game_variable = ''
         self.objid_list = ''
         self.check_pos = ''
@@ -51,6 +54,12 @@ class Client(object):
                         print('receive:', st)
                     if st.find('notify')>-1:
                         self.notify.append(st)
+                    elif st.find('strategy`open')>-1:
+                        self.strategy_open = st[14:]
+                    elif st.find('Strategy`select')>-1:
+                        self.strategy_select = st[18:]
+                    elif st.find('confirm')>-1:
+                        self.confirm = st[15:]
                     elif st.find('game_variable')>-1:
                         self.game_variable = '' if st.find('`') < 0 else st
                     elif st.find('objid_list') > -1:

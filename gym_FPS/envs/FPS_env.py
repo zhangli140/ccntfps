@@ -7,6 +7,7 @@ import time, os, json, copy
 
 from ..utils import *
 from ..client import Client
+from ..server_voice import Server
 from .starcraft import Config
 
 
@@ -60,15 +61,16 @@ class FPSEnv(gym.Env):
     def render(self, mode='human', close=False):
         pass
 
-    def set_env(self, SEVERIP='127.0.0.1', SERVERPORT=5123, client_DEBUG=False, env_DEBUG=False, speedup=1):
+    def set_env(self, SEVERIP='127.0.0.1', SERVERPORT=5123, socket_DEBUG=False, env_DEBUG=False, speedup=1):
         '''
         配置env
         '''
         self.IP = SEVERIP
         self.port = SERVERPORT
-        self.client_DEBUG = client_DEBUG
-        self.client = Client(SEVERIP=SEVERIP, SERVERPORT=SERVERPORT, DEBUG=client_DEBUG)
-        # self.client2 = Client(SEVERIP=SEVERIP, SERVERPORT=SERVERPORT, DEBUG=client_DEBUG, name='client2')
+        self.socket_DEBUG = socket_DEBUG
+        self.client = Client(SEVERIP=SEVERIP, SERVERPORT=SERVERPORT, DEBUG=socket_DEBUG)
+        # self.client2 = Client(SEVERIP=SEVERIP, SERVERPORT=SERVERPORT, DEBUG=socket_DEBUG, name='client2')
+        self.server_voice = Server(SEVERIP=SEVERIP, SERVERPORT=8338, DEBUG=socket_DEBUG)
         self.units = dict()
         self.states = dict()
         self.episode_id = 0
@@ -118,7 +120,7 @@ class FPSEnv(gym.Env):
 
         return pos
 
-    def get_game_variable(self, ):
+    def _get_game_variable(self, ):
         '''
         获取units所有状态 但不包括弹药数 敌我标记（暂时用team_id代替 -1为敌人 正数为我方）
         objid_list 为 'all' 或 list
@@ -163,7 +165,7 @@ class FPSEnv(gym.Env):
                 team_member[tid].append(int(unit_id))
 
             self.team_member = team_member
-            self.states = states.copy()
+            self.states = states
             if self.DEBUG:
                 print(self.states)
             time.sleep(0.1)
@@ -192,10 +194,12 @@ class FPSEnv(gym.Env):
         self.client.objid_list = ''
         if self.thread_flag:
             self.thread_flag = False
-            self.t1 = threading.Thread(target=self.get_game_variable)
+            self.t1 = threading.Thread(target=self._get_game_variable)
             self.t1.start()
             self.t2 = threading.Thread(target=self._wait_for_open_panel)
             self.t2.start()
+            self.t3 = threading.Thread(target=self._voice_check)
+            self.t3.start()
 
         # self.get_game_variable()
         # if s.find('success')==-1:
@@ -214,7 +218,7 @@ class FPSEnv(gym.Env):
         cmd = 'cmd=restart`port=%d' % self.port
         self.client.send(cmd)
         time.sleep(sleep_time)
-        self.set_env(self.IP, SERVERPORT=self.port, client_DEBUG=self.client_DEBUG)
+        self.set_env(self.IP, SERVERPORT=self.port, client_DEBUG=self.socket_DEBUG)
 
     def playerai(self, ):
         '''
@@ -546,25 +550,35 @@ class FPSEnv(gym.Env):
         # s = self.client.receive()
         return  # s
 
-    def add_strategy(self, strategy1, strategy2, d):
+    def add_strategy(self, strategy1, strategy2, pos, d):
         '''
-        d={'Items': []}  #init
         strategy1:str
         strategy2:list
+        pos:list[list]
         '''
-        d2={'Items': [{'value':s} for s in strategy2], 'value':strategy1}
+        #d2={'Items': [{'value':s} for s in strategy2], 'value':strategy1}
+        d2={'Items': [],'value':strategy1}
+        if len(strategy2)!=len(pos):
+            print('策略长度不同')
+            return 
+        for i in range(len(strategy2)):
+            d3=[{'value':'%d,%d,0'%(p[0],p[2])} for p in pos[i]]
+            d4={'value':strategy2[i],'Positions':d3}
+            d2['Items'].append(d4)
         d['Items'].append(d2)
 
     def _wait_for_open_panel(self,):
+        '''
+        决定当面板打开时应该显示什么
+        '''
         while True:
             s=self.client.strategy_open
             if len(s)>0:
                 #TODO
                 print('receive open')
                 d={'Items': []}
-                self.add_strategy('进攻',['text00','text01'],d)
-                self.add_strategy('撤退',['text10','text11','text12'],d)
-                self.add_strategy('333',['text20','text21','text22'],d)
+                self.add_strategy('进攻',['text00','text01'],[[[11,2,11],[22,3,22]],[[33,4,33],[44,3,44]]],d)
+                self.add_strategy('撤退',['text10','text11'],[[[55,92,55],[66,93,66]],[[77,54,77],[88,63,88]]],d)
                 self.open_strategy_panel(d)
 
                 self.client.strategy_open=''
@@ -594,6 +608,39 @@ class FPSEnv(gym.Env):
         l=s.split(':')
         print('strategy:',s)
         return s, d['Items'][int(l[0])]['Items'][int(l[1])]
+
+    def _voice_check(self,):
+        '''
+        检查并处理语音指令
+        '''
+        def work(s):
+            if s.find('方案') > -1:
+                pass
+            elif s.find('撤退') > -1:
+                pass
+            elif s.find('转进') > -1:
+                pass
+            elif s.find('攻击') > -1:
+                pass
+            elif s.find('支援') > -1:
+                pass
+            
+        while True:
+            if len(self.server_voice.buff) > 0:
+                s = self.server_voice.buff
+                print('voice_check:', s)
+                self.client.confirm = ''
+                self.server_voice.buff = ''
+                self.add_chat(s, 0)
+                for _ in range(10):
+                    if len(self.client.confirm) > 0:
+                        self.add_chat('语音指令确认' + s, 0)
+                        work(s)
+                        self.client.confirm = ''
+                        break
+                    time.sleep(0.1)
+
+
 
     def get_enemy_nearby(self, team_id=1, mindis=30):
         '''
