@@ -31,7 +31,7 @@ class Config(object):
     memory_capacity = cf.getint('model', 'memory_capacity')
     batch_size = cf.getint('model', 'batch_size')
     enemy_num = cf.getint('model', 'enemy_num')
-    replay_start_size = cf.getint('model', 'reply_start_size')
+    replay_start_size = cf.getint('model', 'replay_start_size1')
 
     episode_to_save = cf.getint('utils', 'episode_to_save')
     episode_to_reset_win = cf.getint('utils', 'episode_to_reset_win')

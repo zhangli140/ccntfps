@@ -59,7 +59,7 @@ class Client(object):
                     elif st.find('Strategy`select')>-1:
                         self.strategy_select = st[18:]
                     elif st.find('confirm')>-1:
-                        self.confirm = st[15:]
+                        self.confirm = st[-1]
                     elif st.find('game_variable')>-1:
                         self.game_variable = '' if st.find('`') < 0 else st
                     elif st.find('objid_list') > -1:

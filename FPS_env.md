@@ -22,7 +22,7 @@
 - objid_list 为 'all' 或 list 值会保存在self.states中
 - return dict{id:dict{key:value}}
 
-## new_episode(self, save=1, replay_file=None, speedup=1, disablelog=0)
+## new_episode(self, save=1, replay_file=None, speedup=1, disablelog=0, scene_name='Simple')
 - 开始新的一局 
 - replay_file 回放的文件名 None时按时间自动生成
 - 游戏的speedup请在IsLand.xml中设置
@@ -77,7 +77,7 @@
 - 绘制一条提示路径
 - return path_id
 
-## remove_pathline(self, mark_id)
+## remove_pathline(self, path_id)
 - 根据id清除path
 
 ## add_observer(self, pos, radius)

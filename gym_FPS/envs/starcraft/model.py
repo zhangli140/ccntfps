@@ -5,6 +5,9 @@ import numpy as np
 from .Config import *
 from .memory import *
 from tensorflow.contrib import rnn
+from Memory import *
+import math
+import copy
 
 CONFIG = Config()
 
@@ -19,66 +22,68 @@ REPLAY_START_SIZE=CONFIG.replay_start_size
 
 
 class DDPG(object):
-    def __init__(self, sess, a_dim, s_dim, a_bound, actor, critic):
+    def __init__(self, a_dim, s_dim, a_bound, actor, critic):
         self.memory = np.zeros((MEMORY_CAPACITY), dtype=object)
         self.pointer = 0
-        self.sess = sess
-        self.a_replace_counter, self.c_replace_counter = 0, 0
-        self.a_dim, self.s_dim, self.a_bound = a_dim, s_dim, a_bound,
-        self.S = tf.placeholder(tf.float32, [None, s_dim], 's')
-        self.S1 = tf.placeholder(tf.float32, [None, s_dim], 's1')
-        self.global_step = tf.Variable(0, trainable=False)
-        self.S_ = tf.placeholder(tf.float32, [None, s_dim], 's_')
-        self.S1_ = tf.placeholder(tf.float32, [None, s_dim], 'S1_')
-        self.R = tf.placeholder(tf.float32, [None, 1], 'r')
-        self.unit_size = tf.placeholder(tf.int32, name='unit_size')
-        self.unit_size_ = tf.placeholder(tf.int32, name='unit_size_')
-        self.variable_summaries('reward', self.R)
-        with tf.variable_scope(actor):
-            self.a = self._build_a(self.S, self.S1, scope='eval', trainable=True, unit_size=self.unit_size)
-            self.variable_summaries('eval_a', self.a)
-            a_ = self._build_a(self.S_, self.S1_, scope='target', trainable=False, unit_size=self.unit_size_)
-            self.variable_summaries('target_a', a_)
-        with tf.variable_scope(critic):
-            # assign self.a = a in memory when calculating q for td_error,
-            # otherwise the self.a is from Actor when updating Actor
-            q = self._build_c(self.S, self.a, scope='eval', trainable=True, unit_size=self.unit_size)
-            self.variable_summaries('eval_q', q)
-            q_ = self._build_c(self.S_, a_, scope='target', trainable=False, unit_size=self.unit_size_)
-            self.variable_summaries('target_q', q_)
-        # networks parameters
+        self.graph = tf.Graph()
+        self.sess = tf.Session(graph=self.graph)
+        with self.graph.as_default():
+            self.a_replace_counter, self.c_replace_counter = 0, 0
+            self.a_dim, self.s_dim, self.a_bound = a_dim, s_dim, a_bound,
+            self.S = tf.placeholder(tf.float32, [None, s_dim], 's')
+            self.S1 = tf.placeholder(tf.float32, [None, s_dim], 's1')
+            self.global_step = tf.Variable(0, trainable=False)
+            self.S_ = tf.placeholder(tf.float32, [None, s_dim], 's_')
+            self.S1_ = tf.placeholder(tf.float32, [None, s_dim], 'S1_')
+            self.R = tf.placeholder(tf.float32, [None, 1], 'r')
+            self.unit_size = tf.placeholder(tf.int32, name='unit_size')
+            self.unit_size_ = tf.placeholder(tf.int32, name='unit_size_')
+            self.variable_summaries('reward', self.R)
+            with tf.variable_scope(actor):
+                self.a = self._build_a(self.S, self.S1, scope='eval', trainable=True, unit_size=self.unit_size)
+                self.variable_summaries('eval_a', self.a)
+                a_ = self._build_a(self.S_, self.S1_, scope='target', trainable=False, unit_size=self.unit_size_)
+                self.variable_summaries('target_a', a_)
+            with tf.variable_scope(critic):
+                # assign self.a = a in memory when calculating q for td_error,
+                # otherwise the self.a is from Actor when updating Actor
+                q = self._build_c(self.S, self.a, scope='eval', trainable=True, unit_size=self.unit_size)
+                self.variable_summaries('eval_q', q)
+                q_ = self._build_c(self.S_, a_, scope='target', trainable=False, unit_size=self.unit_size_)
+                self.variable_summaries('target_q', q_)
+            # networks parameters
 
 
-        self.ae_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=actor + '/eval')
-        self.at_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=actor + '/target')
-        self.ce_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=critic + '/eval')
-        self.ct_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=critic + '/target')
+            self.ae_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=actor + '/eval')
+            self.at_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=actor + '/target')
+            self.ce_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=critic + '/eval')
+            self.ct_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=critic + '/target')
 
-        for var in self.ae_params:
-            self.variable_summaries(var.op.name, var)
-        for var in self.at_params:
-            self.variable_summaries(var.op.name, var)
-        for var in self.ce_params:
-            self.variable_summaries(var.op.name, var)
-        for var in self.ct_params:
-            self.variable_summaries(var.op.name, var)
+            for var in self.ae_params:
+                self.variable_summaries(var.op.name, var)
+            for var in self.at_params:
+                self.variable_summaries(var.op.name, var)
+            for var in self.ce_params:
+                self.variable_summaries(var.op.name, var)
+            for var in self.ct_params:
+                self.variable_summaries(var.op.name, var)
 
-        q_target = self.R + GAMMA * q_
-        self.variable_summaries('q_target', q_target)
-        # in the feed_dic for the td_error, the self.a should change to actions in memory
-        td_error = tf.losses.mean_squared_error(labels=q_target, predictions=q)
-        self.ctrain = tf.train.AdamOptimizer(LR_C).minimize(td_error, var_list=self.ce_params,
-                                                            global_step=self.global_step)
-        a_loss = - tf.reduce_sum(q)  # maximize the q
-        self.atrain = tf.train.AdamOptimizer(LR_A).minimize(a_loss, var_list=self.ae_params,
-                                                            global_step=self.global_step)
-        tf.summary.scalar('a_loss', a_loss)
-        tf.summary.scalar('c_loss', td_error)
+            q_target = self.R + GAMMA * q_
+            self.variable_summaries('q_target', q_target)
+            # in the feed_dic for the td_error, the self.a should change to actions in memory
+            td_error = tf.losses.mean_squared_error(labels=q_target, predictions=q)
+            self.ctrain = tf.train.AdamOptimizer(LR_C).minimize(td_error, var_list=self.ce_params,
+                                                                global_step=self.global_step)
+            a_loss = - tf.reduce_sum(q)  # maximize the q
+            self.atrain = tf.train.AdamOptimizer(LR_A).minimize(a_loss, var_list=self.ae_params,
+                                                                global_step=self.global_step)
+            tf.summary.scalar('a_loss', a_loss)
+            tf.summary.scalar('c_loss', td_error)
 
-        self.merged_summary_op = tf.summary.merge_all()
-        self.saver = tf.train.Saver(max_to_keep=CONFIG.max_to_keep)
-#        self.summary_writer = tf.summary.FileWriter(CONFIG.summary_dir, self.sess.graph)
-        self.sess.run(tf.global_variables_initializer())
+            self.merged_summary_op = tf.summary.merge_all()
+            self.saver = tf.train.Saver(max_to_keep=CONFIG.max_to_keep)
+    #        self.summary_writer = tf.summary.FileWriter(CONFIG.summary_dir, self.sess.graph)
+            self.sess.run(tf.global_variables_initializer())
 
     def variable_summaries(self, name, var):
         """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
@@ -185,3 +190,865 @@ class DDPG(object):
             b2 = tf.Variable(tf.zeros([1, ], dtype=tf.float32), trainable=trainable)
             Q_value = tf.matmul(outputs, w2) + b2
             return Q_value  # Q(s,a)
+
+
+
+def softmax(y):
+    """ simple helper function here that takes unnormalized logprobs """
+    maxy = np.amax(y)
+    e = np.exp(y - maxy)
+    return e / np.sum(e)
+class DQN(object):
+    """docstring for DQN"""
+    def __init__(self, resolution=(10,14), command_size = 14, learning_rate=5e-3, buffer_size=10000, replace_target_iter=100,gamma=0.99,batch_size=64, index=0, deeper=False):
+        super(DQN, self).__init__()
+        print("DQN init begin")
+        self.hidden1_units = 100
+        self.hidden2_units = 100
+        self.hidden3_units = 100
+        self.hidden4_units = 100
+        self.lr = learning_rate
+        self.graph = tf.Graph()
+        self.sess = tf.Session(graph=self.graph)
+        with self.graph.as_default():
+            self.replace_target_iter = replace_target_iter
+            self.learn_step_counter = 0
+            self.gamma = gamma
+            self.index = index
+            self.resolution = resolution
+            self.command_size = command_size
+            print("before build net")
+            self._build_net()
+            print("DQN not normal!!!!!!!!!!!!!!!!!!!!!")
+            print([v.name for v in self.t_params]) #=> prints lists of vars created
+            print([v.name for v in self.e_params]) #=> prints lists of vars created
+            self.target_replace_op = [tf.assign(t, e) for t, e in zip(self.t_params, self.e_params)]
+            self.saver = tf.train.Saver(max_to_keep=CONFIG.max_to_keep)
+            self.sess.run(tf.global_variables_initializer())
+
+    def printPara(self):
+        for v in self.e_params:
+            if not v.name in ['eval_net0/dense_2/kernel:0']:
+                continue
+            print(v.name)
+            print(self.sess.run(v))
+
+    def saveParaTo(self, filepath):
+        e_params = []
+        for v in self.e_params:
+            if not v.name in ['eval_net0/conv2d/kernel:0',
+                              'eval_net0/conv2d/bias:0',
+                              'eval_net0/conv2d_1/kernel:0',
+                              'eval_net0/conv2d_1/bias:0',
+                              # 'eval_net0/conv2d_2/kernel:0',
+                              # 'eval_net0/conv2d_2/bias:0',
+                              'eval_net0/dense/kernel:0',
+                              'eval_net0/dense_1/kernel:0',
+                              'eval_net0/dense_2/kernel:0',
+                              'eval_net0/dense_3/kernel:0',
+                              'eval_net0/dense_3/bias:0'
+                              ]:
+                continue
+            e_params.append(v)
+        output = self.sess.run(e_params)
+
+        f = open(filepath + '/conv1_kernel.txt', 'a')
+        f.write(str(output[0]) + '\n')
+        f.close()
+
+        f = open(filepath + '/conv1_bias.txt', 'a')
+        f.write(str(output[1]) + '\n')
+        f.close()
+
+        f = open(filepath + '/conv2_kernel.txt', 'a')
+        f.write(str(output[2]) + '\n')
+        f.close()
+
+        f = open(filepath + '/conv2_bias.txt', 'a')
+        f.write(str(output[3]) + '\n')
+        f.close()
+
+        # f = open(filepath + '/conv3_kernel.txt', 'a')
+        # f.write(str(output[4]) + '\n')
+        # f.close()
+        #
+        # f = open(filepath + '/conv3_bias.txt', 'a')
+        # f.write(str(output[5]) + '\n')
+        # f.close()
+
+        # f = open(filepath + '/dense1_kernel.txt', 'a')
+        # f.write(str(output[6]) + '\n')
+        # f.close()
+
+        f = open(filepath + '/dense2_kernel.txt', 'a')
+        f.write(str(output[5]) + '\n')
+        f.close()
+
+        f = open(filepath + '/dense3_kernel.txt', 'a')
+        f.write(str(output[6]) + '\n')
+        f.close()
+
+        f = open(filepath + '/dense4_kernel.txt', 'a')
+        f.write(str(output[7]) + '\n')
+        f.close()
+
+        f = open(filepath + '/dense4_bias.txt', 'a')
+        f.write(str(output[8]) + '\n')
+        f.close()
+
+    def _build_net(self):
+        def fully_connected(prev_layer, num_units, is_training, activation='relu'):
+            layer = tf.layers.dense(prev_layer, num_units,
+                                    use_bias=False,
+                                    activation=None)
+            if activation == 'None':
+                return layer
+            elif activation == 'leaky_relu':
+                layer = tf.nn.leaky_relu(layer)
+                return layer
+            layer = tf.nn.relu(layer)
+            return layer
+
+        def conv2d(prev_layer, filters, kernel_size, strides, pool_size, pool_stride, is_training, activation=tf.nn.relu):
+            conv = tf.layers.conv2d(
+                inputs=prev_layer,
+                filters=filters,
+                kernel_size=kernel_size,
+                strides=strides,
+                activation=activation#tf.nn.relu
+            )
+            # pool = tf.layers.max_pooling2d(
+            #     conv,
+            #     pool_size=pool_size,
+            #     strides=pool_stride,
+            # )    
+            return conv
+
+        def build_layers(scope, s):
+            layers = dict()
+            layers['input'] = s[0]
+            print("begin build_layers scope:{} .....".format(scope))
+            with tf.variable_scope(scope + str(self.index)):
+                # conv0 = conv2d(s,filters=32,kernel_size=16,strides=4,pool_size=2,pool_stride=2,is_training=self.is_training)
+                # shape (64, 64, 1)
+                print("after build conv0")
+                conv1 = conv2d(s, filters=32, kernel_size=8, strides=4, pool_size=2, pool_stride=2,
+                               is_training=self.is_training, activation=tf.nn.relu)
+                layers['conv1'] = conv1[0]
+                # conv1 (18,18,16)
+                print("after build conv1")
+                conv2 = conv2d(conv1, filters=64, kernel_size=4, strides=2, pool_size=2, pool_stride=2,
+                               is_training=self.is_training, activation=tf.nn.relu)
+                layers['conv2'] = conv2[0]
+                # conv2 (13,13,32)
+                print("after build conv2")
+                # conv3 = conv2d(conv2, filters=64, kernel_size=3, strides=1, pool_size=2, pool_stride=2,
+                #                is_training=self.is_training, activation=tf.nn.relu)
+                # layers['conv3'] = conv3[0]
+                # print("after build conv3")
+                flatten_view = tf.contrib.layers.flatten(conv2)
+                layers['flatten'] = flatten_view[0]
+                fc1 = fully_connected(flatten_view, num_units=128, is_training=self.is_training, activation='leaky_relu')
+                layers['fc1'] = fc1[0]
+                fc2 = fully_connected(fc1, num_units=128, is_training=self.is_training, activation='leaky_relu')
+                layers['fc2'] = fc2[0]
+                fc3 = fully_connected(fc2, num_units=64, is_training=self.is_training, activation='leaky_relu')
+                layers['fc3'] = fc3[0]
+                q = tf.layers.dense(fc3, self.command_size, use_bias=True, activation=None)
+                layers['output'] = q[0]
+            print("after build_layers scope:{}!".format(scope))
+            return q, layers
+
+        print("begin init placeholders..")
+        with tf.variable_scope('variable' + str(self.index)):
+            self.is_training = tf.placeholder(tf.bool)
+            self.a = tf.placeholder(tf.int64, [None], name="a")
+
+            # ------------------ build evaluate_net ------------------
+            self.s = tf.placeholder(tf.float32, [None] + list(self.resolution) + [1], name="State")  # input
+            self.q_target = tf.placeholder(tf.float32, [None, self.command_size],
+                                           name="TargetQ")  # for calculating loss
+            # ------------------ build target_net ------------------
+            self.s_ = tf.placeholder(tf.float32, [None] + list(self.resolution) + [1], name="State_next")  # input
+        print("after init placeholders!")
+
+        self.q_eval, self.eval_layers = build_layers("eval_net", self.s)
+        self.q_next, self.next_layers = build_layers("target_net", self.s_)
+        print("before get params")
+        self.t_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='target_net' + str(self.index))
+        self.e_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='eval_net' + str(self.index))
+        print("after get params")
+        with tf.variable_scope('loss' + str(self.index)):
+            self.prob_eval = tf.nn.softmax(self.q_eval)
+            self.loss = tf.reduce_mean(
+                tf.losses.mean_squared_error(self.prob_eval, tf.one_hot(self.a, self.command_size)))
+
+        with tf.variable_scope('train' + str(self.index)):
+            self.learning_rate = tf.placeholder(tf.float32)
+            optimizer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate)
+
+            self.gradients = tf.gradients(self.loss, self.e_params)
+            self._train_op = optimizer.apply_gradients(zip(self.gradients, self.e_params))
+
+    def set_e_params(self, t_params):
+        self.target_replace_op_e = [tf.assign(e, t) for e, t in zip(self.e_params, t_params)]
+        self.sess.run(self.target_replace_op_e)
+
+    def set_t_params(self, t_params):
+        self.target_replace_op_t = [tf.assign(e, t) for e, t in zip(self.t_params, t_params)]
+        self.sess.run(self.target_replace_op_t)
+
+    def get_e_params(self):
+        return self.sess.run(self.e_params)
+
+    def get_t_params(self):
+        return self.sess.run(self.t_params)
+
+    def set_lr(self, learning_rate, lr_decay_rate, min_lr, decay_round):
+        self.lr = learning_rate
+        self.lr_decay_rate = lr_decay_rate
+        self.min_lr = min_lr
+        self.decay_round = decay_round
+
+    def set_decay_params(self, DECAY_PARAMS):
+        self.True_DECAY_PARAMS = DECAY_PARAMS
+
+    def validation(self, s, a, dead_e_index):
+        # ----------------------mean zero begin---------------------------------
+        # print("s.shape:{}".format(np.array(s).shape))
+        s = np.array(s).reshape([-1, self.resolution[0], self.resolution[1], 1])
+        # ----------------------mean zero end------------------------------------------
+        q_eval = self.sess.run([self.q_eval], feed_dict={self.s: s,
+                                                         self.is_training: False})
+
+        q_eval = q_eval[0]
+        # print("q_eval.shape:{}".format(np.array(q_eval).shape))
+        # print("dead_e_index.shape:{}".format(np.array(dead_e_index).shape))
+        # for i in range(0,30):
+        #     print("dead_index[{}]:{}".format(i,dead_e_index[i]))
+        acc_cnt = 0
+        for i in range(0, len(s)):
+            best_a = np.argmax(q_eval[i])
+            if dead_e_index != None:
+                while True:
+                    if best_a <= 8:
+                        break
+                    index = best_a - 9
+                    if index in dead_e_index[i]:
+
+                        q_eval[i][best_a] = -200000
+                        best_a = np.argmax(q_eval[i])
+                        index = best_a - 9
+                        # print("index:",index)
+                    else:
+                        break
+            if best_a == a[i]:
+                acc_cnt += 1
+        acc_rate = acc_cnt * 1.0 / len(s) * 100
+        return acc_rate
+
+    def learn_with_one_episode(self, s, a, s_, isterminal, r, command_size, dead_e_index=None, double_dqn=True,
+                               t_prob_eval=None, use_old=None):
+
+        if self.learn_step_counter % self.replace_target_iter == 0:
+            self.sess.run(self.target_replace_op)
+            print('\ntarget_params_replaced\n')
+        # print("len(s):{}".format(len(s)))
+        # if self.learn_step_counter % self.decay_round == 0 and self.lr > self.min_lr:
+        #     self.lr *= self.lr_decay_rate
+        # if use_old==False:
+        #     self.DECAY_PARAMS = 0
+        # else:
+        #     self.DECAY_PARAMS = self.True_DECAY_PARAMS
+        loss_sum = 0
+        lr = 0
+        target_q = []
+        q_eval_list = []
+        q_next_list = []
+        q_target = self.sess.run(self.q_eval, feed_dict={self.s: s, self.is_training: False})
+        if double_dqn:
+            q_eval_list = self.sess.run(self.q_eval, feed_dict={self.s: s_, self.is_training: False})
+
+            q_next_list = self.sess.run(self.q_next, feed_dict={self.s_: s_, self.is_training: False})
+        else:
+            q_next_list = self.sess.run(self.q_next, feed_dict={self.s_: s_, self.is_training: False})
+
+        for i in range(0, len(s)):
+            if not bool(isterminal[i]):
+                if double_dqn:
+                    q_next = q_next_list[i]
+                    q_eval = q_eval_list[i]
+
+                    q2 = q_next[np.argmax(q_eval)]
+                else:
+
+                    q_next = q_next_list[i]
+                    q2 = np.max(q_next)
+                tmp_target_q = r[i] + q2
+            else:
+                tmp_target_q = r[i]
+            target_q.append(tmp_target_q)
+
+        batch_size = len(s)
+        batch_index = np.arange(batch_size, dtype=np.int32)
+        q_target[batch_index, a] = target_q
+
+        cost, _, q_eval, grad = self.sess.run([self.loss, self._train_op, self.q_eval, self.gradients],
+                                        feed_dict={self.s: s,
+                                                   self.a: a,
+                                                   self.q_target: q_target,
+                                                   self.is_training: True,
+                                                   self.learning_rate: self.lr})
+        acc_rate = 0
+
+        acc_cnt = 0
+        for i in range(0, len(s)):
+            best_a = np.argmax(q_eval[i])
+            if dead_e_index != None:
+                while True:
+                    if best_a <= 8:
+                        break
+                    index = best_a - 9
+                    if index in dead_e_index[i]:
+                        q_eval[i][best_a] = -200000
+                        best_a = np.argmax(q_eval[i])
+                        index = best_a - 9
+                    else:
+                        break
+            if best_a == a[i]:
+                acc_cnt += 1
+        acc_rate = acc_cnt * 1.0 / len(s) * 100
+        if self.learn_step_counter % 100 == 0:
+            # print("self.DECAY_PARAMS:{}".format(self.DECAY_PARAMS))
+            print("test acc_rate:{}".format(acc_rate))
+            print("lr:{}".format(self.lr))
+            print("loss:{}".format(cost))
+        self.learn_step_counter += 1
+        return cost, acc_rate, grad
+
+    def get_prob_eval(self, s):
+        q_eval = self.sess.run([self.q_eval], feed_dict={self.s: s,
+                                                         self.is_training: False})
+        q_eval = q_eval[0]
+        return q_eval
+
+    def choose_action(self, s, command_size, epsilon=0, enjoy=False, dead_e_index=None):
+        s = np.array(s).reshape([1, self.resolution[0], self.resolution[1], 1])
+        eval_layers = dict()
+        if enjoy:
+            mq, eval_layers = self.sess.run([self.q_eval, self.eval_layers],
+                                                    feed_dict={self.s: s, self.is_training: False})
+            mq = mq[0]
+            best_a = np.argmax(mq)
+            if dead_e_index == None:
+                return best_a, eval_layers
+            while True:
+                if best_a <= 8:
+                    break
+                index = best_a - 9
+                if index in dead_e_index:
+                    # invalid action
+                    mq[best_a] = -200000
+                    best_a = np.argmax(mq)
+                    index = best_a - 9
+                else:
+                    break
+            return best_a, eval_layers
+
+        if random() <= epsilon:
+            probs = np.zeros(command_size, dtype=float) + 1.0 / command_size
+            best_a = np.random.choice(np.arange(probs.shape[0]), p=probs.ravel())
+            if dead_e_index == None:
+                return best_a, eval_layers
+            while True:
+                if best_a <= 8:
+                    break
+                index = best_a - 9
+                if index in dead_e_index:
+                    nonzero_cnt = len(np.nonzero(probs)[0]) - 1
+                    fix_prob = probs[best_a]
+                    probs[best_a] = 0
+                    for i in range(len(probs)):
+                        if probs[i] > 0:
+                            probs[i] = probs[i] + fix_prob / nonzero_cnt
+                    best_a = np.random.choice(np.arange(probs.shape[0]), p=probs.ravel())
+                    index = best_a - 9
+
+                else:
+                    break
+
+        else:
+            # forward feed the observation and get q value for every actions
+            mq, eval_layers = self.sess.run([self.q_eval, self.eval_layers],
+                                            feed_dict={self.s: s, self.is_training: False})
+            mq = mq[0]
+            best_a = np.argmax(mq)
+            if dead_e_index == None:
+                return best_a, eval_layers
+            while True:
+                if best_a <= 8:
+                    break
+                index = best_a - 9
+                if index in dead_e_index:
+                    # invalid action
+                    # print("action:{} invalid action!!!!".format(best_a))
+                    mq[best_a] = -200000
+                    best_a = np.argmax(mq)
+                    index = best_a - 9
+                    # print("index:",index)
+                else:
+                    break
+
+        return best_a, eval_layers
+
+
+
+class DQN_normal(object):
+    """docstring for DQN"""
+    def __init__(self, resolution=(10,14), command_size = 14, learning_rate=5e-3, buffer_size=10000, replace_target_iter=100,gamma=0.99,batch_size=64, index=0, deeper=False):
+        super(DQN_normal, self).__init__()
+        self.hidden1_units = 100
+        self.hidden2_units = 100
+        self.hidden3_units = 100
+        self.hidden4_units = 100
+        self.lr = learning_rate
+        self.graph = tf.Graph()
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth=True
+        self.sess = tf.Session(config=config, graph=self.graph)
+        with self.graph.as_default():
+            self.replace_target_iter = replace_target_iter
+            self.learn_step_counter = 0
+            self.gamma = gamma
+            self.index = index
+            self.resolution = resolution
+            self.command_size = command_size
+            self._build_net()
+            print("DQN_normal!!!!!!!!!!!!!!!!!!!!!")
+            print([v.name for v in self.t_params]) #=> prints lists of vars created
+            print([v.name for v in self.e_params]) #=> prints lists of vars created
+            self.target_replace_op = [tf.assign(t, e) for t, e in zip(self.t_params, self.e_params)]
+            self.saver = tf.train.Saver(max_to_keep=CONFIG.max_to_keep)
+            self.sess.run(tf.global_variables_initializer())
+        
+    def saveParaTo(self, filepath):
+        e_params = []
+        for v in self.e_params:
+            if not v.name in ['eval_net0/conv2d/kernel:0',
+                              'eval_net0/conv2d/bias:0',
+                              'eval_net0/conv2d_1/kernel:0',
+                              'eval_net0/conv2d_1/bias:0',
+                              # 'eval_net0/conv2d_2/kernel:0',
+                              # 'eval_net0/conv2d_2/bias:0',
+                              'eval_net0/dense/kernel:0',
+                              'eval_net0/dense_1/kernel:0',
+                              'eval_net0/dense_2/kernel:0',
+                              'eval_net0/dense_3/kernel:0',
+                              'eval_net0/dense_3/bias:0'
+                              ]:
+                continue
+            e_params.append(v)
+        output = self.sess.run(e_params)
+
+        f = open(filepath + '/conv1_kernel.txt', 'a')
+        f.write(str(output[0]) + '\n')
+        f.close()
+
+        f = open(filepath + '/conv1_bias.txt', 'a')
+        f.write(str(output[1]) + '\n')
+        f.close()
+
+        f = open(filepath + '/conv2_kernel.txt', 'a')
+        f.write(str(output[2]) + '\n')
+        f.close()
+
+        f = open(filepath + '/conv2_bias.txt', 'a')
+        f.write(str(output[3]) + '\n')
+        f.close()
+
+        # f = open(filepath + '/conv3_kernel.txt', 'a')
+        # f.write(str(output[4]) + '\n')
+        # f.close()
+        #
+        # f = open(filepath + '/conv3_bias.txt', 'a')
+        # f.write(str(output[5]) + '\n')
+        # f.close()
+
+        # f = open(filepath + '/dense1_kernel.txt', 'a')
+        # f.write(str(output[6]) + '\n')
+        # f.close()
+
+        f = open(filepath + '/dense2_kernel.txt', 'a')
+        f.write(str(output[5]) + '\n')
+        f.close()
+
+        f = open(filepath + '/dense3_kernel.txt', 'a')
+        f.write(str(output[6]) + '\n')
+        f.close()
+
+        f = open(filepath + '/dense4_kernel.txt', 'a')
+        f.write(str(output[7]) + '\n')
+        f.close()
+
+        f = open(filepath + '/dense4_bias.txt', 'a')
+        f.write(str(output[8]) + '\n')
+        f.close()
+
+        
+    def _build_net(self):
+        def fully_connected(prev_layer, num_units, is_training):
+            layer = tf.layers.dense(prev_layer, num_units, use_bias=False, activation=None)
+            # layer = tf.nn.relu(layer)
+            layer = tf.nn.leaky_relu(layer)
+            return layer
+        def conv2d(prev_layer, filters, kernel_size,strides, pool_size,pool_stride,is_training):
+            conv = tf.layers.conv2d(   
+                inputs=prev_layer,
+                filters=filters,
+                kernel_size=kernel_size,
+                strides=strides,
+                activation=tf.nn.relu
+            )   
+            # if pool_size == -1:  
+            #     pass
+            # else:   
+            #     conv = tf.layers.max_pooling2d(
+            #         conv,
+            #         pool_size=pool_size,
+            #         strides=pool_stride,
+            #     )    
+
+            return conv  
+
+        def build_layers(scope, s):
+            print("begin build_layers scope:{} .....".format(scope))
+            with tf.variable_scope(scope+str(self.index)):
+                layers = dict()
+                layers['input'] = s[0]
+                # conv0 = conv2d(s,filters=32,kernel_size=16,strides=4,pool_size=2,pool_stride=2,is_training=self.is_training)
+                # shape (64, 64, 1)
+                print("after build conv0")
+                conv1 = conv2d(s,filters=32,kernel_size=8,strides=4,pool_size=2,pool_stride=2,is_training=self.is_training)
+                layers['conv1'] = conv1[0]
+                # conv1 (18,18,16)
+                print("after build conv1")
+                conv2 = conv2d(conv1,filters=64,kernel_size=4,strides=2,pool_size=2,pool_stride=2,is_training=self.is_training)
+                layers['conv2'] = conv2[0]
+                # conv2 (13,13,32)
+                print("after build conv2")
+                # conv3 = conv2d(conv2,filters=64,kernel_size=3,strides=1,pool_size=2,pool_stride=2,is_training=self.is_training)
+                # layers['conv3] = conv3[0]
+                # print("after build conv3")
+                flatten_view = tf.contrib.layers.flatten(conv2)
+                layers['flatten'] = flatten_view[0]
+                fc1 = fully_connected(flatten_view, num_units=128, is_training=self.is_training)
+                layers['fc1'] = fc1[0]
+                fc2 = fully_connected(fc1, num_units=128, is_training=self.is_training)
+                layers['fc2'] = fc2[0]
+                fc3 = fully_connected(fc2, num_units=64, is_training=self.is_training)
+                layers['fc3'] = fc3[0]
+
+                q = tf.layers.dense(fc3, self.command_size, use_bias=True, activation=None)
+                layers['output'] = q[0]
+
+            print("after build_layers scope:{}!".format(scope))
+            return q, layers
+        with tf.variable_scope('variable'+str(self.index)):
+            # self.learning_rate = tf.placeholder(tf.float32)
+            self.is_training = tf.placeholder(tf.bool)
+            self.a = tf.placeholder(tf.int64,[None], name="a")
+            
+            # ------------------ build evaluate_net ------------------
+            self.s = tf.placeholder(tf.float32, [None] + list(self.resolution) + [1], name="State")  # input
+            self.q_target = tf.placeholder(tf.float32, [None,self.command_size], name="TargetQ")  # for calculating loss
+            # ------------------ build target_net ------------------
+            self.s_ = tf.placeholder(tf.float32, [None] + list(self.resolution) + [1], name="State_next")  # input
+            
+        self.q_eval, self.eval_layers = build_layers("eval_net",self.s)
+        self.q_next, self.next_layers = build_layers("target_net",self.s_)
+        self.t_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='target_net'+str(self.index))
+        self.e_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='eval_net'+str(self.index))
+
+        with tf.variable_scope('loss'+str(self.index)):
+
+            self.loss = tf.reduce_mean(tf.squared_difference(self.q_target, self.q_eval), name="TD_error")
+
+        with tf.variable_scope('train'+str(self.index)):
+            self.learning_rate = tf.placeholder(tf.float32)
+            optimizer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate)
+
+            self.gradients = tf.gradients(self.loss,self.e_params)
+            self._train_op = optimizer.apply_gradients(zip(self.gradients, self.e_params))
+
+
+    def set_e_params(self,t_params):
+        self.target_replace_op_e = [tf.assign(e, t) for e, t in zip(self.e_params, t_params)]
+        self.sess.run(self.target_replace_op_e)
+    def set_t_params(self,t_params):
+        self.target_replace_op_t = [tf.assign(e, t) for e, t in zip(self.t_params, t_params)]
+        self.sess.run(self.target_replace_op_t)
+
+    def get_e_params(self):
+        return self.sess.run(self.e_params)
+    def get_t_params(self):
+        return self.sess.run(self.t_params)
+
+    def set_lr(self,learning_rate,lr_decay_rate,min_lr,decay_round):
+        self.lr = learning_rate
+        self.lr_decay_rate = lr_decay_rate
+        self.min_lr = min_lr
+        self.decay_round = decay_round
+    def set_decay_params(self,DECAY_PARAMS):
+        self.True_DECAY_PARAMS = DECAY_PARAMS
+    def validation(self,s,a, dead_e_index):
+        #----------------------mean zero begin---------------------------------
+        # print("s.shape:{}".format(np.array(s).shape))
+        s=np.array(s).reshape([-1,self.resolution[0],self.resolution[1],1])
+        #----------------------mean zero end------------------------------------------
+        q_eval = self.sess.run([self.q_eval], feed_dict={self.s:s,
+                                                                self.is_training:False})
+
+        q_eval = q_eval[0]
+
+        acc_cnt = 0
+        for i in range(0,len(s)):
+            best_a = np.argmax(q_eval[i])
+
+            while True:
+                if dead_e_index is None:
+                    break
+                if best_a <= 8:
+                    break
+                index = best_a - 9
+                if index in dead_e_index[i]:
+                    
+                    q_eval[i][best_a] = -200000
+                    best_a = np.argmax(q_eval[i])
+                    index = best_a - 9
+                    # print("index:",index)
+                else:
+                    break
+            if best_a == a[i]:
+                acc_cnt+=1
+        acc_rate = acc_cnt*1.0/len(s)*100
+        return acc_rate
+
+
+
+    def learn_with_one_episode(self,s,a,s_,isterminal,r,command_size,dead_e_index=None,double_dqn=False, t_prob_eval=None,use_old=None):
+
+        if self.learn_step_counter % self.replace_target_iter == 0:
+            self.sess.run(self.target_replace_op)
+            print('\ntarget_params_replaced\n')
+        loss_sum = 0
+        lr = 0
+        target_q = []
+        q_eval_list = []
+        q_next_list = []
+        q_target = self.sess.run(self.q_eval,feed_dict={self.s:s,self.is_training:False})
+        if double_dqn:
+            q_eval_list = self.sess.run(self.q_eval,feed_dict={self.s:s_,self.is_training:False})
+
+            q_next_list = self.sess.run(self.q_next,feed_dict={self.s_:s_,self.is_training:False})
+        else:
+            q_next_list = self.sess.run(self.q_next,feed_dict={self.s_:s_,self.is_training:False})
+
+        for i in range(0,len(s)):
+            if not bool(isterminal[i]):
+                if double_dqn:
+                    q_next = q_next_list[i]
+                    q_eval = q_eval_list[i]
+
+                    q2 = q_next[ np.argmax(q_eval) ]
+                else:
+
+                    q_next = q_next_list[i]
+                    q2 = np.max(q_next)
+                tmp_target_q = r[i]  +  q2
+            else:
+                tmp_target_q = r[i] 
+            target_q.append(tmp_target_q)
+
+        batch_size = len(s)
+        batch_index = np.arange(batch_size,dtype=np.int32)
+        q_target[batch_index,a] = target_q 
+
+        cost,_,q_eval,grad = self.sess.run([self.loss,self._train_op, self.q_eval, self.gradients],
+                                        feed_dict={ self.s:s,
+                                                    self.q_target:q_target, 
+                                                    self.is_training:True,
+                                                    self.learning_rate:self.lr})
+        acc_rate = 0
+
+        acc_cnt = 0
+        for i in range(0,len(s)):
+            best_a = np.argmax(q_eval[i])
+            while True:
+                if dead_e_index is None:
+                    break
+                if best_a <= 8:
+                    break
+                index = best_a - 9
+                if index in dead_e_index[i]:
+                    q_eval[i][best_a] = -200000
+                    best_a = np.argmax(q_eval[i])
+                    index = best_a - 9
+                else:
+                    break
+            if best_a == a[i]:
+                acc_cnt+=1
+        acc_rate = acc_cnt*1.0/len(s)*100
+
+
+        if self.learn_step_counter % 100 == 0:
+            print("test acc_rate:{}".format(acc_rate))
+            print("lr:{}".format(self.lr))
+            print("loss:{}".format(cost))
+        self.learn_step_counter += 1
+        return cost,acc_rate, grad
+
+    def choose_action(self, s, command_size, epsilon=0, enjoy=False, dead_e_index=None):
+        s = np.array(s).reshape([1, self.resolution[0], self.resolution[1], 1])
+        eval_layers = dict()
+        if enjoy:
+            mq, eval_layers = self.sess.run([self.q_eval, self.eval_layers],
+                                                    feed_dict={self.s: s, self.is_training: False})
+            mq = mq[0]
+            best_a = np.argmax(mq)
+            if dead_e_index == None:
+                return best_a, eval_layers
+            while True:
+                if best_a <= 8:
+                    break
+                index = best_a - 9
+                if index in dead_e_index:
+                    # invalid action
+                    mq[best_a] = -200000
+                    best_a = np.argmax(mq)
+                    index = best_a - 9
+                else:
+                    break
+            return best_a, eval_layers
+
+        if random() <= epsilon:
+            probs = np.zeros(command_size, dtype=float) + 1.0 / command_size
+            best_a = np.random.choice(np.arange(probs.shape[0]), p=probs.ravel())
+            if dead_e_index == None:
+                return best_a, eval_layers
+            while True:
+                if best_a <= 8:
+                    break
+                index = best_a - 9
+                if index in dead_e_index:
+                    nonzero_cnt = len(np.nonzero(probs)[0]) - 1
+                    fix_prob = probs[best_a]
+                    probs[best_a] = 0
+                    for i in range(len(probs)):
+                        if probs[i] > 0:
+                            probs[i] = probs[i] + fix_prob / nonzero_cnt
+                    best_a = np.random.choice(np.arange(probs.shape[0]), p=probs.ravel())
+                    index = best_a - 9
+
+                else:
+                    break
+
+        else:
+            # forward feed the observation and get q value for every actions
+            mq, eval_layers = self.sess.run([self.q_eval, self.eval_layers],
+                                            feed_dict={self.s: s, self.is_training: False})
+            mq = mq[0]
+            best_a = np.argmax(mq)
+            if dead_e_index == None:
+                return best_a, eval_layers
+            while True:
+                if best_a <= 8:
+                    break
+                index = best_a - 9
+                if index in dead_e_index:
+                    # invalid action
+                    # print("action:{} invalid action!!!!".format(best_a))
+                    mq[best_a] = -200000
+                    best_a = np.argmax(mq)
+                    index = best_a - 9
+                    # print("index:",index)
+                else:
+                    break
+
+        return best_a, eval_layers
+
+    # def choose_action(self, s, command_size, epsilon=0,enjoy=False,dead_e_index=None):
+    #     s = np.array(s).reshape([1,self.resolution[0],self.resolution[1], 1])
+    #     if enjoy:
+    #         mq = self.sess.run(self.q_eval, feed_dict={self.s: s,self.is_training:False})[0]
+    #         best_a = np.argmax(mq)
+    #         while True:
+    #             if dead_e_index is None:
+    #                 break
+    #             if best_a <= 8:
+    #                 break
+    #             index = best_a - 9
+    #             if index in dead_e_index:
+    #                 # invalid action
+    #                 # print("action:{} invalid action!!!!".format(best_a))
+    #                 mq[best_a] = -200000
+    #                 best_a = np.argmax(mq)
+    #                 index = best_a - 9
+    #                 # print("index:",index)
+    #             else:
+    #                 break
+    #         return best_a
+    #
+    #
+    #     if random() <= epsilon:
+    #         probs = np.zeros(command_size,dtype=float) + 1.0/command_size
+    #         best_a =  np.random.choice(np.arange(probs.shape[0]), p=probs.ravel())
+    #         while True:
+    #             if dead_e_index is None:
+    #                 break
+    #             if best_a <= 8:
+    #                 break
+    #             index = best_a - 9
+    #             if index in dead_e_index:
+    #                 nonzero_cnt = len(np.nonzero(probs)[0]) - 1
+    #                 fix_prob= probs[best_a]
+    #                 probs[best_a]=0
+    #                 for i in range(len(probs)):
+    #                     if probs[i] > 0:
+    #                         probs[i] = probs[i] + fix_prob/nonzero_cnt
+    #                 best_a =  np.random.choice(np.arange(probs.shape[0]), p=probs.ravel())
+    #                 index = best_a - 9
+    #
+    #             else:
+    #                 break
+    #
+    #     else:
+    #     # forward feed the observation and get q value for every actions
+    #         mq = self.sess.run(self.q_eval, feed_dict={self.s: s, self.is_training:False})[0]
+    #         best_a = np.argmax(mq)
+    #
+    #         while True:
+    #             if dead_e_index is None:
+    #                 break
+    #             if best_a <= 8:
+    #                 break
+    #             index = best_a - 9
+    #             if index in dead_e_index:
+    #                 # invalid action
+    #                 # print("action:{} invalid action!!!!".format(best_a))
+    #                 mq[best_a] = -200000
+    #                 best_a = np.argmax(mq)
+    #                 index = best_a - 9
+    #                 # print("index:",index)
+    #             else:
+    #                 break
+    #
+    #     return best_a
+
+
+
+
+
+
+
+        
+        

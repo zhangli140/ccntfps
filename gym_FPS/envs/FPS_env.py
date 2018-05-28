@@ -9,6 +9,7 @@ from ..utils import *
 from ..client import Client
 from ..server_voice import Server
 from .starcraft import Config
+from sklearn.svm import SVC
 
 
 class FPSEnv(gym.Env):
@@ -22,6 +23,11 @@ class FPSEnv(gym.Env):
             time.sleep(CONFIG.wait_for_game_start)
         except:
             print('自动打开失败')
+
+        self.clf = SVC(probability=True)
+        X=pickle.load(open('myfeatures.pkl','rb'))
+        y=pickle.load(open('mylabels.pkl','rb'))
+        self.clf.fit(X,y)
 
     def _step(self, action):
         raise NotImplementedError
@@ -61,7 +67,8 @@ class FPSEnv(gym.Env):
     def render(self, mode='human', close=False):
         pass
 
-    def set_env(self, SEVERIP='127.0.0.1', SERVERPORT=5123, socket_DEBUG=False, env_DEBUG=False, speedup=1):
+    def set_env(self, SEVERIP='127.0.0.1', SERVERPORT=5123, socket_DEBUG=False, env_DEBUG=False, speedup=1,
+                is_enemy=False):
         '''
         配置env
         '''
@@ -70,7 +77,10 @@ class FPSEnv(gym.Env):
         self.socket_DEBUG = socket_DEBUG
         self.client = Client(SEVERIP=SEVERIP, SERVERPORT=SERVERPORT, DEBUG=socket_DEBUG)
         # self.client2 = Client(SEVERIP=SEVERIP, SERVERPORT=SERVERPORT, DEBUG=socket_DEBUG, name='client2')
-        self.server_voice = Server(SEVERIP=SEVERIP, SERVERPORT=8338, DEBUG=socket_DEBUG)
+        try:
+            self.server_voice
+        except:
+            self.server_voice = Server(SEVERIP=SEVERIP, SERVERPORT=8338, DEBUG=socket_DEBUG)
         self.units = dict()
         self.states = dict()
         self.episode_id = 0
@@ -80,15 +90,33 @@ class FPSEnv(gym.Env):
         self.DEBUG = env_DEBUG
 
         self.speedup = speedup
+        self.is_enemy = is_enemy
 
         self.team_target = dict()
         self.team_member = dict()
+        self.enemy_team_member = dict()
 
         self.attack_target = dict()
         self.refs = dict()
         self.mark_id = 0
         self.path_id = 0
         self.episode_id = 1
+        
+        self.assignment = None
+        self.cpos_list1 = []
+        self.cpos_list2 = []
+		
+        self.cmdThreadsLen = 0
+        self.support_list = dict()
+		
+        if self.thread_flag:
+            self.thread_flag = False
+            self.t1 = threading.Thread(target=self._get_game_variable)
+            self.t1.start()
+            self.t2 = threading.Thread(target=self._wait_for_open_panel)
+            self.t2.start()
+            self.t3 = threading.Thread(target=self._voice_check)
+            self.t3.start()
 
     def get_objid_list(self, name=1, pos=0):
         '''
@@ -165,7 +193,7 @@ class FPSEnv(gym.Env):
                 team_member[tid].append(int(unit_id))
 
             self.team_member = team_member
-            self.states = states
+            self.states = states.copy()
             if self.DEBUG:
                 print(self.states)
             time.sleep(0.1)
@@ -192,14 +220,6 @@ class FPSEnv(gym.Env):
         self.client.game_variable = ''
         self.client.check_pos = ''
         self.client.objid_list = ''
-        if self.thread_flag:
-            self.thread_flag = False
-            self.t1 = threading.Thread(target=self._get_game_variable)
-            self.t1.start()
-            self.t2 = threading.Thread(target=self._wait_for_open_panel)
-            self.t2.start()
-            self.t3 = threading.Thread(target=self._voice_check)
-            self.t3.start()
 
         # self.get_game_variable()
         # if s.find('success')==-1:
@@ -218,7 +238,7 @@ class FPSEnv(gym.Env):
         cmd = 'cmd=restart`port=%d' % self.port
         self.client.send(cmd)
         time.sleep(sleep_time)
-        self.set_env(self.IP, SERVERPORT=self.port, client_DEBUG=self.socket_DEBUG)
+        self.set_env(self.IP, SERVERPORT=self.port, socket_DEBUG=self.socket_DEBUG, is_enemy=self.is_enemy)
 
     def playerai(self, ):
         '''
@@ -296,6 +316,17 @@ class FPSEnv(gym.Env):
         return s.find('1') > -1
         '''
 
+    def moveAndAttackClosest(self, destPos, objid_list='all', group='group1', auth='normal', pos='replace', walkType='walk',
+             reachDist=6, maxDoTimes='', team_id=None, enemy=None):
+        self.cmdThreadsLen += 1
+        self.move(destPos=destPos, objid_list=objid_list, group=group, auth=auth, pos=pos, walkType=walkType,
+                  reachDist=reachDist, maxDoTimes=maxDoTimes, team_id=team_id)
+        time.sleep(0.8)
+        unit = self.states[objid_list[0]]
+        targetObjID, targetDist = get_closest(x1=unit['POSITION'][0], y1=unit['POSITION'][2], enemies=enemy)
+        self.set_target_objid(objid_list=objid_list, targetObjID=targetObjID)
+        self.attack(objid_list=objid_list, auth='normal', pos='replace')
+
     def move(self, destPos, objid_list='all', group='group1', auth='normal', pos='replace', walkType='walk',
              reachDist=6, maxDoTimes='', team_id=None, ):
         '''
@@ -319,7 +350,9 @@ class FPSEnv(gym.Env):
                 maxDoTimes = " maxDoTimes='%d'" % maxDoTimes
         cmd += "auth=%s`group=%s`pos=%s`ai=<action name='MoveToPosAct' destPos='%s' walkType='%s' reachDist='%d'%s/>" \
                % (auth, group, pos, list2str(destPos), walkType, reachDist, maxDoTimes)
+        # print('move cmd:', cmd)
         s = self.make_action(cmd)
+        self.cmdThreadsLen -= 1
         return s
 
     def add_patrol_path(self, pos_list, objid, noteam=0, noleader=1):
@@ -423,7 +456,6 @@ class FPSEnv(gym.Env):
         time.sleep(wait_time)
         self.show_ui_win(name, 0)
 
-
     def show_ui_win(self, name, is_show=1):
         '''
         显示ui界面
@@ -456,6 +488,11 @@ class FPSEnv(gym.Env):
         '''
         编队  队员必须提前存在
         '''
+        if team_id < 0: #敌方编队特殊处理
+            for key in self.enemy_team_member.keys():
+                self.enemy_team_member[key] = list(set(self.enemy_team_member[key]) - set(member_objid_list))
+            self.enemy_team_member[team_id] = member_objid_list.copy()
+            return
         cmd = 'cmd=create_team`leader_objid=%d`member_objid_list=%s`team_id=%d' % (
             leader_objid, list2str(member_objid_list), team_id)
         self.client.send(cmd)
@@ -537,7 +574,12 @@ class FPSEnv(gym.Env):
         # print(cmd)
         self.client.send(cmd)
         # s = self.client.receive()
+        self.cmdThreadsLen -= 1
         return  # s
+
+    def setTargetAndAttack(self, objid_list, targetObjID, auth='normal', pos='replace'):
+        self.set_target_objid(objid_list=objid_list, targetObjID=targetObjID)
+        self.attack(objid_list=objid_list, auth=auth, pos=pos)
 
     def set_target_objid(self, objid_list, targetObjID, auth='replace'):
         '''
@@ -570,15 +612,142 @@ class FPSEnv(gym.Env):
     def _wait_for_open_panel(self,):
         '''
         决定当面板打开时应该显示什么
-        '''
+        '''     
+        def get_word(l):
+            '''
+            根据分兵策略生成战术面板文字
+            '''
+            res = []
+            words = ['北门 ', '东门 ', '南门 ', '西门 ', '驻守中心 ']
+            for i, num in enumerate(l):
+                if num > 0:
+                    res.append(words[i] + str(int(num)))
+            return ','.join(res)
+
+        def get_point(l):
+            '''
+            根据分兵策略生成战术面板提示绿点
+            '''
+            if self.is_enemy:
+                point_list = [ [125, -1, 95], [125, -1, 135],[165, -1, 95], [125, -1, 55], [85, -1, 95]]
+            else:
+                point_list = [[125, -1, 175], [205, -1, 95], [125, -1, 15], [45, -1, 95]]
+            res = []
+            for i, num in enumerate(l):
+                for _ in range(int(num)):
+                    res.append([point_list[i][0], -1, point_list[i][1]])
+
+            for i in range(len(res)):
+                res[i][0] += (i - 5) // 3
+                res[i][2] += (i - 5) % 3
+
+            return res
+
+
+        def outer():
+            '''
+            by xiaoxiang
+            '''
+            def getpos(curpos):
+                p1=[125,175]
+                p2=[205,95]
+                p3=[125,15]
+                p4=[45,95]
+                p5=[125,95]
+                p6=[125,125]
+                p7=[155,95]
+                p8=[125,65]
+                p9=[95,95]
+                outerradius=30
+                innerradius=15
+                matrixcenter=[p1,p2,p3,p4,p5,p6,p7,p8,p9]
+                if isinner(curpos,matrixcenter[0],outerradius):
+                    return 1
+                if isinner(curpos,matrixcenter[1],outerradius):
+                    return 2
+                if isinner(curpos,matrixcenter[2],outerradius):
+                    return 3
+                if isinner(curpos,matrixcenter[3],outerradius):
+                    return 4
+                if isinner(curpos,matrixcenter[4],innerradius):
+                    return 5
+                if isinner(curpos,matrixcenter[5],innerradius):
+                    return 6
+                if isinner(curpos,matrixcenter[6],innerradius):
+                    return 7
+                if isinner(curpos,matrixcenter[7],innerradius):
+                    return 8
+                if isinner(curpos,matrixcenter[8],innerradius):
+                    return 9
+                return 0
+
+            def isinner(curpos,area,radius):
+                leftbottom=[area[0]-radius,area[1]-radius]
+                righttop=[area[0]+radius,area[1]+radius]
+                flag=False
+                if leftbottom[0]<=curpos[0] and leftbottom[1]<=curpos[1] and righttop[0]>=curpos[0] and righttop[1]>=curpos[1]:
+                    flag=True
+                return flag
+
+            def getfeature():
+                '''
+                changed some to speedup
+                '''
+                curfeaturepos=self.states
+                curenemylist=[0,0,0,0,0]
+                self._make_feature()
+                enemyteam=self.state['units_enemy']
+                #comradeteam=self.state['units_myself']
+                for playerid,state in curfeaturepos.items():
+                    if playerid in enemyteam:
+                        temp=state["POSITION"]
+                        curpos=[temp[0],temp[2]]
+                        index=getpos(curpos)
+                        if index>0:
+                            curenemylist[index-5]+=1
+                            
+                data, result=[], []
+                for i in range(11):
+                    for j in range(11-i):
+                        for k in range(11-i-j):
+                            m=10-i-j-k
+                            result.append([i,j,k,m])
+                            curposfeature=[i,j,k,m]
+                            curposfeature.extend(curenemylist)
+                            data.append(curposfeature)
+                            
+                pre = self.clf.predict_proba(data)[:,1]
+                return result[np.argmax(pre)]
+            return getfeature()
+
+
         while True:
-            s=self.client.strategy_open
-            if len(s)>0:
-                #TODO
+            s = self.client.strategy_open
+            if len(s) > 0:
                 print('receive open')
-                d={'Items': []}
-                self.add_strategy('进攻',['text00','text01'],[[[11,2,11],[22,3,22]],[[33,4,33],[44,3,44]]],d)
-                self.add_strategy('撤退',['text10','text11'],[[[55,92,55],[66,93,66]],[[77,54,77],[88,63,88]]],d)
+                d = {'Items': []}
+                str1 = get_word(self.assignment[0])
+                str2 = get_word(self.assignment[1])
+                green_point1 = get_point(self.assignment[0])
+                green_point2 = get_point(self.assignment[1])
+                if not self.is_enemy:
+                    print(outer())
+                    res_xx = outer()
+                    self.assignment[2] = res_xx
+                    str3 = get_word(res_xx)
+                    green_point3 = get_point(res_xx)
+                    self.add_strategy('分兵', [str1, str2, str3], [green_point1, green_point2, green_point3], d)
+                else:
+                    self.add_strategy('分兵', [str1, str2], [green_point1, green_point2], d)
+                
+                if len(self.assignment[0]) == 4:
+                    self.add_strategy('进攻', ['同时进入'], [[[125, -1, 100]]], d)
+                else:
+                    c_pos_list = []
+                    for _, ut in self.states.items():
+                        if (ut['TEAM_ID'] < 0 and self.is_enemy) or (ut['TEAM_ID'] > 0 and not self.is_enemy):
+                            c_pos_list.append(ut['POSITION'])
+                    self.add_strategy('驻守', ['原地防御'], [c_pos_list], d)
                 self.open_strategy_panel(d)
 
                 self.client.strategy_open=''
@@ -613,17 +782,45 @@ class FPSEnv(gym.Env):
         '''
         检查并处理语音指令
         '''
-        def work(s):
-            if s.find('方案') > -1:
-                pass
-            elif s.find('撤退') > -1:
-                pass
-            elif s.find('转进') > -1:
-                pass
-            elif s.find('攻击') > -1:
-                pass
-            elif s.find('支援') > -1:
-                pass
+        def work(s, word):
+            pos_list = [[], 
+                [125,-1,100],[205,-1,180],[125,-1,260],[45,-1,180],
+                [125,-1,180],[125,-1,140],[165,-1,180],[125,-1,220],[85,-1,180]
+            ]
+            l = s.split(word)
+            team_id = int(l[0])
+            aera_id = int(l[1])
+            if self.is_enemy:
+                objid_list = self.enemy_team_member[-team_id]
+                for uid in objid_list:
+                    self.pushed_cmd_excuting[uid] = [1, pos_list[aera_id][0], pos_list[aera_id][2]]
+                self.origin_ai(objid_list=objid_list, move_attack=False)
+                self.move(destPos=pos_list[aera_id], objid_list=objid_list, walkType='run', pos='head')
+            else:
+                objid_list = self.team_member[team_id]
+                for uid in objid_list:
+                    self.pushed_cmd_excuting[uid] = [1, pos_list[aera_id][0], pos_list[aera_id][2]]
+                self.origin_ai(team_id=team_id, move_attack=False)
+                self.move(destPos=pos_list[aera_id], team_id=team_id, walkType='run', pos='head')
+
+        def analyse(s):
+            try:
+                if s.find('方案') > -1:
+                    pass
+                elif s.find('撤退') > -1:
+                    work(s, '队撤退')
+                elif s.find('转进') > -1:
+                    pass
+                elif s.find('攻击') > -1:
+                    work(s, '队攻击')
+                elif s.find('进攻') > -1:
+                    work(s, '队进攻')
+                elif s.find('支援') > -1:
+                    work(s, '队支援')
+                elif s.find('编队') > -1:
+                    pass
+            except:
+                print('except')
             
         while True:
             if len(self.server_voice.buff) > 0:
@@ -632,10 +829,10 @@ class FPSEnv(gym.Env):
                 self.client.confirm = ''
                 self.server_voice.buff = ''
                 self.add_chat(s, 0)
-                for _ in range(10):
+                for _ in range(20):
                     if len(self.client.confirm) > 0:
                         self.add_chat('语音指令确认' + s, 0)
-                        work(s)
+                        analyse(s)
                         self.client.confirm = ''
                         break
                     time.sleep(0.1)
@@ -833,7 +1030,7 @@ class FPSEnv(gym.Env):
         print('cur_pos:123',cur_pos)
         self.origin_ai([uid], move_attack=move_attack)
 
-    def origin_ai(self, objid_list='all', team_id=-1, move_attack=True):
+    def origin_ai(self, objid_list='all', team_id=None, move_attack=True):
         '''
         使用原本ai替换当前ai
         '''
@@ -850,12 +1047,13 @@ class FPSEnv(gym.Env):
         ai = '<check name="CheckTimeChk" interval="0"><check name="CanAttackTargetChk"> <action name="ShootAct"/> %s </check>' % (move_attack)
         ai += '<check name="CheckTimeChk" interval="0.2"> <action name="SearchEnemyAct"/>  <action name="SearchLeaderAct">'
         ai += '<action name="MoveToPosAct" destObj="leader" walkType="run"  reachDist="6"/> </action> <action name="PatrolAct"/> </check></check>'
-        if team_id > -1:
+        if type(team_id) == int:
             team_id_str = 'team_id=%d`' % team_id
         else:
             team_id_str = '' 
         s = 'objid_list=%s`%sauth=normal`group=group1`pos=replace`ai=%s' % (list2str(objid_list), team_id_str, ai)
         self.make_action(s)
+        self.cmdThreadsLen -= 1
 
         return s
 

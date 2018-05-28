@@ -165,9 +165,6 @@ class SingleBattleEnv(fc.FPSEnv):
             else:
                 self.states[commands[i][1]]['LAST_CMD'] = [1, commands[i][2][0], commands[i][2][2]]
                 self.move(objid_list=[commands[i][1]], destPos=commands[i][2], reachDist=3, walkType='run')
-            self.states[commands[i][1]]['LAST_TIME'] = self.states[commands[i][1]]['TIME']
-            self.states[commands[i][1]]['TIME'] = time.time()
-            self.states[commands[i][1]]['LAST_POSITION_'] = self.states[commands[i][1]]['POSITION']
         for uid, ut in self.states.items():
             if ut['TEAM_ID'] < 0 and uid != 0 and ut['HEALTH'] > 0:
                 self.states[uid]['LAST_TIME'] = self.states[uid]['TIME']

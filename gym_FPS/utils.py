@@ -32,7 +32,9 @@ def get_closest(x1, y1, enemies):
     min_dist = 9999999
     id = -1
     for uid, ut in enemies.items():
-        dist = get_distance(ut['POSITION'][0], ut['POSITION'][1], x1, y1)
+        if ut['HEALTH'] <= 0:
+            continue
+        dist = get_distance(ut['POSITION'][0], ut['POSITION'][2], x1, y1)
         if dist < min_dist:
             id = uid
             min_dist = dist

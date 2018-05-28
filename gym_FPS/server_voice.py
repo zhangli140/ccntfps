@@ -4,7 +4,7 @@ import base64
 import threading
 
 class Server(object):
-    def __init__(self, SEVERIP='127.0.0.1', SERVERPORT=83338, DEBUG=True):
+    def __init__(self, SEVERIP='127.0.0.1', SERVERPORT=8338, DEBUG=True):
         self.SEVERIP = SEVERIP
         self.SERVERPORT = SERVERPORT
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -33,7 +33,8 @@ class Server(object):
         try:
             data = self.c.recv(4096)
             if len(data) > 0:
-                print('recv', data.decode('gbk'))
+                if self.DEBUG:
+                    print('recv', data.decode('gbk'))
                 return data
         except:
             print('received time out!')
