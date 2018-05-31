@@ -113,15 +113,7 @@ class doubleBattleEnv(fc.FPSEnv):
         self.state['win'] = False
         self.pushed_cmd_excuting = dict()
         #print("while1")
-        if not self.is_enemy:
-            qqqq = 0
-            while len(self.states) != 2:
-                qqqq += 1
-                time.sleep(0.1)   # 等待主角出现
-                if qqqq > 1000:
-                    print(len(self.states))
-                    print('two while:', self.t1)
-                    sys.exit(0)
+        time.sleep(10)
 
         if not self.is_enemy:
             self.add_obj(name="敌人1", is_enemy=True, pos=[125, -1, 100], leader_objid=-1, team_id=-1)

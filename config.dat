@@ -5,7 +5,7 @@ serverip=127.0.0.1
 serverport=5130
 sleeptime=3
 max_dist=100
-game_dir="G:/qjh/20161028 无人机/20171030FPS/JWXjwx-Fps-master/Fps/Output/Simple1.exe"
+game_dir="G:/qjh/20161028 无人机/20171030FPS/fps_0.59_走路动画_主角死亡处理/Fps.exe 201.lnk"
 wait_for_game_start=10
 [model]
 hidden_size=70

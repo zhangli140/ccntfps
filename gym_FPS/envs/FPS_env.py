@@ -4,12 +4,14 @@ import numpy as np
 import math, random, threading
 import gym
 import time, os, json, copy
+from socket import *
 
 from ..utils import *
 from ..client import Client
 from ..server_voice import Server
 from .starcraft import Config
 from sklearn.svm import SVC
+from sklearn.externals import joblib
 
 
 class FPSEnv(gym.Env):
@@ -24,10 +26,7 @@ class FPSEnv(gym.Env):
         except:
             print('自动打开失败')
 
-        self.clf = SVC(probability=True)
-        X=pickle.load(open('myfeatures.pkl','rb'))
-        y=pickle.load(open('mylabels.pkl','rb'))
-        self.clf.fit(X,y)
+        self.clf = joblib.load('./trainmodel/train_model.m')
 
     def _step(self, action):
         raise NotImplementedError
@@ -80,7 +79,7 @@ class FPSEnv(gym.Env):
         try:
             self.server_voice
         except:
-            self.server_voice = Server(SEVERIP=SEVERIP, SERVERPORT=8338, DEBUG=socket_DEBUG)
+            self.server_voice = Server(SEVERIP='127.0.0.1', SERVERPORT=8338, DEBUG=socket_DEBUG)
         self.units = dict()
         self.states = dict()
         self.episode_id = 0
@@ -353,7 +352,7 @@ class FPSEnv(gym.Env):
         # print('move cmd:', cmd)
         s = self.make_action(cmd)
         self.cmdThreadsLen -= 1
-        return s
+        return #s
 
     def add_patrol_path(self, pos_list, objid, noteam=0, noleader=1):
         '''
@@ -635,7 +634,7 @@ class FPSEnv(gym.Env):
             res = []
             for i, num in enumerate(l):
                 for _ in range(int(num)):
-                    res.append([point_list[i][0], -1, point_list[i][1]])
+                    res.append(point_list[i])
 
             for i in range(len(res)):
                 res[i][0] += (i - 5) // 3
@@ -733,7 +732,10 @@ class FPSEnv(gym.Env):
                 if not self.is_enemy:
                     print(outer())
                     res_xx = outer()
-                    self.assignment[2] = res_xx
+                    if len(self.assignment) < 3:
+                        self.assignment = np.concatenate([self.assignment, [res_xx]], 0)
+                    else:
+                        self.assignment[2] = res_xx
                     str3 = get_word(res_xx)
                     green_point3 = get_point(res_xx)
                     self.add_strategy('分兵', [str1, str2, str3], [green_point1, green_point2, green_point3], d)
@@ -773,7 +775,7 @@ class FPSEnv(gym.Env):
                 print('timeout!!!!')
                 return None, None
         s=self.client.strategy_select
-        self.client.strategy_select=''
+        #self.client.strategy_select=''
         l=s.split(':')
         print('strategy:',s)
         return s, d['Items'][int(l[0])]['Items'][int(l[1])]
@@ -787,36 +789,43 @@ class FPSEnv(gym.Env):
                 [125,-1,100],[205,-1,180],[125,-1,260],[45,-1,180],
                 [125,-1,180],[125,-1,140],[165,-1,180],[125,-1,220],[85,-1,180]
             ]
-            l = s.split(word)
-            team_id = int(l[0])
-            aera_id = int(l[1])
-            if self.is_enemy:
-                objid_list = self.enemy_team_member[-team_id]
-                for uid in objid_list:
-                    self.pushed_cmd_excuting[uid] = [1, pos_list[aera_id][0], pos_list[aera_id][2]]
+            try:
+                l = s.split(word)
+                team_id = l[0]
+                area_id = int(l[1])
+                if self.is_enemy:
+                    if team_id.find('队') > -1:
+                        objid_list = self.enemy_team_member[-int(team_id[:-1])]
+                    else:
+                        objid_list = [int(team_id[:-1])]
+                    for uid in objid_list:
+                        self.pushed_cmd_excuting[uid] = [1, pos_list[area_id][0], pos_list[area_id][2]]
+                else:
+                    if team_id.find('队') > -1:
+                        objid_list = self.enemy_team_member[int(team_id[:-1])]
+                    else:
+                        objid_list = [int(team_id[:-1])]
+                    for uid in objid_list:
+                        self.pushed_cmd_excuting[uid] = [1, pos_list[area_id][0], pos_list[area_id][2]]
                 self.origin_ai(objid_list=objid_list, move_attack=False)
-                self.move(destPos=pos_list[aera_id], objid_list=objid_list, walkType='run', pos='head')
-            else:
-                objid_list = self.team_member[team_id]
-                for uid in objid_list:
-                    self.pushed_cmd_excuting[uid] = [1, pos_list[aera_id][0], pos_list[aera_id][2]]
-                self.origin_ai(team_id=team_id, move_attack=False)
-                self.move(destPos=pos_list[aera_id], team_id=team_id, walkType='run', pos='head')
+                self.move(destPos=pos_list[area_id], objid_list=objid_list, walkType='run', pos='head')
+            except:
+                self.add_chat('解析失败', 0)
 
         def analyse(s):
             try:
                 if s.find('方案') > -1:
                     pass
                 elif s.find('撤退') > -1:
-                    work(s, '队撤退')
+                    work(s, '撤退')
                 elif s.find('转进') > -1:
                     pass
                 elif s.find('攻击') > -1:
-                    work(s, '队攻击')
+                    work(s, '攻击')
                 elif s.find('进攻') > -1:
-                    work(s, '队进攻')
+                    work(s, '进攻')
                 elif s.find('支援') > -1:
-                    work(s, '队支援')
+                    work(s, '支援')
                 elif s.find('编队') > -1:
                     pass
             except:

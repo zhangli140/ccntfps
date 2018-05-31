@@ -198,6 +198,7 @@ def softmax(y):
     maxy = np.amax(y)
     e = np.exp(y - maxy)
     return e / np.sum(e)
+
 class DQN(object):
     """docstring for DQN"""
     def __init__(self, resolution=(10,14), command_size = 14, learning_rate=5e-3, buffer_size=10000, replace_target_iter=100,gamma=0.99,batch_size=64, index=0, deeper=False):
