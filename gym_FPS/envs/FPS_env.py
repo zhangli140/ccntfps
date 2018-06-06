@@ -99,6 +99,7 @@ class FPSEnv(gym.Env):
         self.refs = dict()
         self.mark_id = 0
         self.path_id = 0
+        self.cube_id = 0
         self.episode_id = 1
         
         self.assignment = None
@@ -419,6 +420,26 @@ class FPSEnv(gym.Env):
         根据id清除path
         '''
         cmd = 'cmd=remove_pathline`id=%d' % path_id
+        self.client.send(cmd)
+
+    def draw_cube(self, up, down, left, right, red, green, blue, alpha=0.2):
+        '''
+        给方块区域涂色
+        red, green, blue均为0-1的小数而不是0-255的uint8
+        '''
+        self.cube_id += 1
+        cmd = 'cmd=drawcube`isDraw=1`index=%d`downleft=%d,%d,0`upright=%d,%d,0'%(self.cube_id, left, down, right, up)
+        cmd += '`red=%f`green=%f`blue=%f`alpha=%f'%(red, green, blue, alpha)
+        self.client.send(cmd)
+
+    def remove_cube(self, cube_id):
+        '''
+        根据cube_id清除涂色
+        '''
+        if cube_id >= self.cube_id:
+            print('cube_id out of range')
+            return False
+        cmd = 'cmd=drawcube`isDraw=0`index=%d'%cube_id
         self.client.send(cmd)
 
     def add_observer(self, pos, radius):
@@ -786,8 +807,7 @@ class FPSEnv(gym.Env):
         '''
         def work(s, word):
             pos_list = [[], 
-                [125,-1,100],[205,-1,180],[125,-1,260],[45,-1,180],
-                [125,-1,180],[125,-1,140],[165,-1,180],[125,-1,220],[85,-1,180]
+                [125, -1, 95], [125, -1, 135], [165, -1, 95], [125, -1, 55], [85, -1, 95]
             ]
             try:
                 l = s.split(word)
@@ -796,15 +816,19 @@ class FPSEnv(gym.Env):
                 if self.is_enemy:
                     if team_id.find('队') > -1:
                         objid_list = self.enemy_team_member[-int(team_id[:-1])]
-                    else:
+                    elif team_id[-1] == '号':
                         objid_list = [int(team_id[:-1])]
+                    else:
+                        objid_list = [int(team_id)]
                     for uid in objid_list:
                         self.pushed_cmd_excuting[uid] = [1, pos_list[area_id][0], pos_list[area_id][2]]
                 else:
                     if team_id.find('队') > -1:
                         objid_list = self.enemy_team_member[int(team_id[:-1])]
-                    else:
+                    elif team_id[-1] == '号':
                         objid_list = [int(team_id[:-1])]
+                    else:
+                        objid_list = [int(team_id)]
                     for uid in objid_list:
                         self.pushed_cmd_excuting[uid] = [1, pos_list[area_id][0], pos_list[area_id][2]]
                 self.origin_ai(objid_list=objid_list, move_attack=False)

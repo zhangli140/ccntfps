@@ -255,6 +255,20 @@ if __name__ == '__main__':
             tcpClient.close()
             if recv == 'YES':
                 fight = True
+        #编队 
+        temp_team = {1:[],2:[],3:[],4:[],5:[]}
+        inside_pos_list =[[125,-1,95],[125,-1,135],[165,-1,95],[125,-1,55],[85,-1,95]]
+        for uid, u_data in env.states.items():
+            if u_data['TEAM_ID'] > 0:
+                x = u_data['POSITION'][0]
+                y = u_data['POSITION'][2]
+                for i in range(5):
+                    if abs(x-inside_pos_list[i][0]) + abs(y-inside_pos_list[i][2]) < 12:
+                        temp_team[i+1].append(uid)
+                        break
+
+        for team_id, objid_list in temp_team.items():
+            env.create_team(-1, objid_list, -team_id)
 
     screen = env.reset_fight()
     screen_my, screen_enemy = screen['screen_my'], screen['screen_enemy']
