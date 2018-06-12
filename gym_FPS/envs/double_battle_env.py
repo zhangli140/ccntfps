@@ -82,6 +82,9 @@ class doubleBattleEnv(fc.FPSEnv):
         th2 = threading.Thread(target=self.pushedCmdMonitor)
         th2.start()
 
+        self.mc = list()
+        self.mc.append(utils.get_key_from_value(d=self.units, v='client_enemy'))
+        
         return self.obs
 
     def _reset(self):
@@ -241,14 +244,14 @@ class doubleBattleEnv(fc.FPSEnv):
                     if myself is None:
                         return cmds
                     x2,y2 = self._action2cmd(action[i], uid,flag)
-                    enemy_id, distance = utils.get_closest(x2, y2, self.state['units_enemy'])
+                    enemy_id, distance = utils.get_closest_except(x2, y2, self.state['units_enemy'], exp=self.mc)
                     cmds.append([0, uid, enemy_id])
                 elif action[i] is not -1:
                     # Move action
                     if myself is None:
                         return cmds
                     x2, y2 = self._action2cmd(action[i], uid, flag)
-                    enemy_id, distance = utils.get_closest(x2, y2, self.state['units_enemy'])
+                    enemy_id, distance = utils.get_closest_except(x2, y2, self.state['units_enemy'], exp=self.mc)
                     cmds.append([0, uid, enemy_id])
 
         else:
@@ -267,14 +270,14 @@ class doubleBattleEnv(fc.FPSEnv):
                     if myself is None:
                         return cmds
                     x2,y2 = self._action2cmd(action[i], uid,flag)
-                    enemy_id, distance = utils.get_closest(x2, y2, self.state['units_myself'])
+                    enemy_id, distance = utils.get_closest_except(x2, y2, self.state['units_myself'], exp=self.mc)
                     cmds.append([0, uid, enemy_id])
                 elif action[i] is not -1:
                     # Move action
                     if myself is None:
                         return cmds
                     x2, y2 = self._action2cmd(action[i], uid, flag)
-                    enemy_id, distance = utils.get_closest(x2, y2, self.state['units_myself'])
+                    enemy_id, distance = utils.get_closest_except(x2, y2, self.state['units_myself'], exp=self.mc)
                     cmds.append([0, uid, enemy_id])
 
 
@@ -358,128 +361,6 @@ class doubleBattleEnv(fc.FPSEnv):
             self.states[commands_e[i][1]]['LAST_TIME'] = self.states[commands_e[i][1]]['TIME']
             self.states[commands_e[i][1]]['TIME'] = time.time()
             self.states[commands_e[i][1]]['LAST_POSITION_'] = self.states[commands_e[i][1]]['POSITION']
-
-            # if self.new_epidode_flag:
-            #     self.new_epidode_flag = False
-            #     cmdThreads.append(threading.Thread(target=self.origin_ai,
-            #                                        kwargs={'objid_list': self.state['units_enemy'].keys()}))
-
-            # for ind in range(len(self.units_e_id)):
-            #     uid = self.units_e_id[ind]
-            #     ut = self.myunits[uid]
-            #     if ut['HEALTH'] > 0:
-            #         x, y = ut['POSITION'][0], ut['POSITION'][2]
-            #         enemy_id, distance = utils.get_closest(x, y, self.state['units_myself'])
-            #         self.set_target_objid(objid_list=[uid], targetObjID=enemy_id)
-            #         cmdThreads.append(threading.Thread(target=self.attack,
-            #                                            kwargs={'objid_list': [uid], 'auth': 'normal',
-            #                                                    'pos': 'replace'}))
-
-            # # 注意：以下注释以敌方视角叙述
-            # # 敌我士兵按照距离外部四点的距离归类到四个战场
-            # pointsSolsMyself, pointsSolsEnemy = self.gatherPointsSoldiers()
-            # # 计算在每个战场敌我士兵的总血量（除去正在支援的士兵）
-            # pointsHealthSumMyself, pointsHealthSumEnemy = [0 for _ in range(len(self.points_out))], [0 for _ in range(
-            #     len(self.points_out))]
-            # for i in range(len(self.points_out)):
-            #     for _, uid in enumerate(pointsSolsEnemy[i]):
-            #         if uid in self.support_list.keys():
-            #             continue
-            #         ut = self.myunits[uid]
-            #         pointsHealthSumEnemy[i] += ut['HEALTH']
-            #     for _, uid in enumerate(pointsSolsMyself[i]):
-            #         ut = self.myunits[uid]
-            #         pointsHealthSumMyself[i] += ut['HEALTH']
-            # # 若支援士兵已到达支援战场，或者要支援的战场里队友或者敌人都死光了，就把此人从支援列表里移除
-            # support_list_ = self.support_list.copy()
-            # for uid, pos in self.support_list.items():
-            #     for i in range(len(self.points_out)):
-            #         if uid in pointsSolsEnemy[i]:
-            #             ut = self.myunits[uid]
-            #             if pos == i or pointsHealthSumEnemy[pos] == 0 or pointsHealthSumMyself[pos] == 0:
-            #                 support_list_.pop(uid)
-            #                 pointsHealthSumEnemy[i] += ut['HEALTH']
-            # self.support_list = support_list_
-            # # 对每个战场计算一个支援权重，若在某个战场敌方总血量小于我方，则权重为0，反之，设置权重为（敌方总血量/我方总血量）
-            # pointsSupportProp = []
-            # for i in range(len(self.points_out)):
-            #     if pointsHealthSumEnemy[i] != 0 and pointsHealthSumEnemy[i] < pointsHealthSumMyself[i]:
-            #         pointsSupportProp.append(pointsHealthSumMyself[i] / pointsHealthSumEnemy[i])
-            #     else:
-            #         pointsSupportProp.append(0)
-            # # 归一化
-            # if sum(pointsSupportProp) != 0:
-            #     pointsSupportProp = [it / sum(pointsSupportProp) for it in pointsSupportProp]
-            #
-            # # 指令阶段，遍历第i个战场
-            # for i in range(len(self.points_out)):
-            #     # 若第i个战场我方总血量低于或等于敌方，则不支援，此战场的士兵攻击距离自己最近的目标
-            #     if pointsHealthSumEnemy[i] <= pointsHealthSumMyself[i]:
-            #         for _, uid in enumerate(pointsSolsEnemy[i]):
-            #             # 支援列表中的士兵（说明还没有支援到位）不做处理，以免给其下达新的指令打断支援过程
-            #             if uid in self.support_list.keys():
-            #                 continue
-            #             ut = self.myunits[uid]
-            #             x, y = ut['POSITION'][0], ut['POSITION'][2]
-            #             enemy_id, distance = utils.get_closest(x, y, self.state['units_myself'])
-            #             self.set_target_objid(objid_list=[uid], targetObjID=enemy_id)
-            #             cmdThreads.append(threading.Thread(target=self.attack,
-            #                                                kwargs={'objid_list': [uid], 'auth': 'normal',
-            #                                                        'pos': 'replace'}))
-            #     # 否则，按策略抽调一批增援部队
-            #     else:
-            #         # 增援队列，只有在队列内的士兵才被允许前往支援（是否支援，支援哪里要根据下面策略决策）
-            #         supporter = []
-            #         pointHealthSum = pointsHealthSumEnemy[i]
-            #         for _, uid in enumerate(pointsSolsEnemy[i]):
-            #             if uid in self.support_list.keys():
-            #                 continue
-            #             ut = self.myunits[uid]
-            #             # 加入支援队列的士兵总血量不得超过在此据点的敌我血量差，防止为了增援而把优势打成劣势
-            #             if pointHealthSum - ut['HEALTH'] >= pointsHealthSumMyself[i]:
-            #                 supporter.append(uid)
-            #                 pointHealthSum -= ut['HEALTH']
-            #             # 余下的士兵行为与不支援的据点士兵一样
-            #             else:
-            #                 x, y = ut['POSITION'][0], ut['POSITION'][2]
-            #                 enemy_id, distance = utils.get_closest(x, y, self.state['units_myself'])
-            #                 self.set_target_objid(objid_list=[uid], targetObjID=enemy_id)
-            #                 cmdThreads.append(threading.Thread(target=self.attack,
-            #                                                    kwargs={'objid_list': [uid], 'auth': 'normal',
-            #                                                            'pos': 'replace'}))
-            #         # 处理支援队列
-            #         # 用于判断是否派出士兵增援的阈值，此战场敌我总血量相差越大，派出支援的概率越大
-            #         threshold = pointsHealthSumMyself[i] / pointsHealthSumEnemy[i]
-            #         for _, uid in enumerate(supporter):
-            #             ut = self.myunits[uid]
-            #             # 判断是否派出该士兵支援
-            #             e = random.random()
-            #             # 随机数小于阈值，不派出
-            #             if e < threshold or sum(pointsSupportProp) == 0:
-            #                 x, y = ut['POSITION'][0], ut['POSITION'][2]
-            #                 enemy_id, distance = utils.get_closest(x, y, self.state['units_myself'])
-            #                 self.set_target_objid(objid_list=[uid], targetObjID=enemy_id)
-            #                 cmdThreads.append(threading.Thread(target=self.attack,
-            #                                                    kwargs={'objid_list': [uid], 'auth': 'normal',
-            #                                                            'pos': 'replace'}))
-            #                 continue
-            #             # 派出，判断支援哪个点，按照之前算出的各据点的支援权重，加权随机
-            #             e = random.random()
-            #             pos = 0
-            #             for j in range(len(self.points_out)):
-            #                 if pointsSupportProp[j] == 0:
-            #                     continue
-            #                 pos = j
-            #                 if e > pointsSupportProp[j]:
-            #                     e -= pointsSupportProp[j]
-            #                 else:
-            #                     break
-            #             # 派出增援，命令其前往对应战场，并将其加入支援列表
-            #             self.support_list[uid] = pos
-            #             cmdThreads.append(threading.Thread(target=self.move,
-            #                                                kwargs={'objid_list': [uid],
-            #                                                        'destPos': self.points_out[pos],
-            #                                                        'reachDist': 3, 'walkType': 'run'}))
 
         random.shuffle(cmdThreads)
         self.cmdThreadsLen = len(cmdThreads)

@@ -40,6 +40,21 @@ def get_closest(x1, y1, enemies):
             min_dist = dist
     return id,min_dist
 
+def get_key_from_value(d, v):
+    return list(d.keys())[list(d.values()).index(v)]
+
+def get_closest_except(x1, y1, enemies, exp=[]):
+    min_dist = 9999999
+    id = -1
+    for uid, ut in enemies.items():
+        if uid in exp or ut['HEALTH'] <= 0:
+            continue
+        dist = get_distance(ut['POSITION'][0], ut['POSITION'][2], x1, y1)
+        if dist < min_dist:
+            id = uid
+            min_dist = dist
+    return id,min_dist
+
 def maxmin_distance(units_my, units_enemy):
     max_dist = 0
     nb_us = 0

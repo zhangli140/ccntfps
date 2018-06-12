@@ -58,12 +58,7 @@ batch_size = 16
 command_size = 9
 resolution = (255, 255)
 
-#host = '7.201.221.113'
-#host = '7.201.238.223'
-#host = '10.212.47.241'
-host = CONFIG.clientip
-port = 12345
-addr = (host, port)
+
 
 def wf(str, flag):
     if flag == 0:
@@ -164,7 +159,7 @@ if __name__ == '__main__':
     # ----------------------------------init env------------------------------------------
     env = gym.make('FPSDouble-v0')
     print("begin init env....")
-    env.set_env('127.0.0.1', 5123, socket_DEBUG=False, env_DEBUG=False, speedup=CONFIG.speed, is_enemy=False)
+    env.set_env(args.ip, 5123, socket_DEBUG=False, env_DEBUG=False, speedup=CONFIG.speed, is_enemy=False)
 
     agm = Assignment(env)    # env.restart(port=args.port)
     env.assignment = np.zeros((3, 4), dtype=np.int32)    
@@ -180,10 +175,7 @@ if __name__ == '__main__':
 
     s, _ = env.reset()
     input()#等待client启动
-    tcpClient = socket(AF_INET, SOCK_STREAM)
-    tcpClient.connect(addr)
-    tcpClient.send('init'.encode(encoding="utf-8"))            
-    tcpClient.close()
+
 
     current_step = 0
     done = False
@@ -226,7 +218,7 @@ if __name__ == '__main__':
         print(229)
         #agm.Assign(assign_p_1, [0, 0, 0, 0, 0])
         env.stop = False
-        threading.Thread(target=agm.Assign, args=(env.assignment[0], [0, 0, 0, 0, 0])).start()
+        threading.Thread(target=agm.Assign, args=(assign_p_1, [0, 0, 0, 0, 0])).start()
         while len(env.client.strategy_select) < 1 and env.stop is False:
             time.sleep(1)
         print(235)
@@ -250,15 +242,7 @@ if __name__ == '__main__':
             elif cant_f > 3:
                 fight = True
 
-        tcpClient = socket(AF_INET, SOCK_STREAM)
-        tcpClient.connect(addr)
-        if fight:
-            tcpClient.send('YES'.encode(encoding="utf-8"))
-            break
-        else:
-            print("Can't fight!!!")
-            tcpClient.send('NO'.encode(encoding="utf-8"))
-        tcpClient.close()
+
         s = s_
         #编队
         temp_team = {1:[],2:[],3:[],4:[]}
@@ -284,15 +268,6 @@ if __name__ == '__main__':
     
     
     while not done:
-        # 检测游戏是否挂掉了
-        if not win32gui.FindWindow(0, 'Fps[服务器端:10000]'):
-            env.__del__()
-            env = gym.make('FPSDouble-v0')
-            env.set_env(args.ip, args.port, socket_DEBUG=False, env_DEBUG=False, speedup=CONFIG.speed, is_enemy=False)
-            env.seed(123)
-            print("restart")
-            epi_flag = False
-            break
 
         current_step += 1
 

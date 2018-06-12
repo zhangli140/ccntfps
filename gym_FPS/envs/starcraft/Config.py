@@ -6,6 +6,7 @@ cf.read('config.dat', encoding='utf-8')
 class Config(object):
 
     serverip = cf.get('fps', 'serverip')
+    clientip = cf.get('fps', 'clientip')
     serverport = cf.getint('fps', 'serverport')
     speed = cf.getfloat('fps', 'speed')
     frame_skip = cf.getint('fps', 'frame_skip')

@@ -80,7 +80,7 @@ class Assignment(object):
         if obj_pos == 0:
             inside_choose_rank = [5, 1, 2, 3, 4]
         else:
-            inside_choose_rank = [5, 0, (obj_pos+2) % 4+1, obj_pos % 4+1, (obj_pos+3) % 4+1]
+            inside_choose_rank = [5, 0, (obj_pos+2) % 4+1, obj_pos % 4+1, (obj_pos+1) % 4+1]
         for point in inside_choose_rank:
             while len(self.inside_state[point]) > 0 and self.inside_action[obj_pos] > 0:
                 self.env.sup_inside[obj_pos].append(self.inside_state[point][-1:])

@@ -1,12 +1,13 @@
 # FPS_env api
 
-## set_env(self, SEVERIP='127.0.0.1', SERVERPORT=5123, client_DEBUG=False, env_DEBUG=False, speedup=1)
+## set_env(self, SEVERIP='127.0.0.1', SERVERPORT=5123, client_DEBUG=False, env_DEBUG=False, speedup=1, is_enemy=False)
 - env配置 在gym.make之后调用
 - SEVERIP FPS服务器IP
 - SERVERPORT FPS服务器端口
 - client_DEBUG socket调试信息输出开关
 - env_DEBUG env调试信息输出开关
 - speedup 游戏加速时需匹配此项
+- is_enemy 敌我标志
 
 ## get_objid_list(self, name=1, pos=0)
 - 请不要主动调用此函数
@@ -33,7 +34,7 @@
 - port -1时在相邻端口启动游戏 否则在port端口启动游戏
 
 ## playerai(self, )
-- 主角进入ai模式
+- 主角进入ai模式 可使用代码控制
 
 ## ailog(self, objid)
 - 输出某人的日志 reset不会改变该状态
@@ -80,6 +81,15 @@
 ## remove_pathline(self, path_id)
 - 根据id清除path
 
+## draw_cube(self, up, down, left, right, red, green, blue, alpha=0.2)
+- 小地图涂色
+- red, green, blue均为0-1的小数而不是0-255的uint8
+- alpha为透明度
+- return cube_id
+
+## remove_cube(self, cube_id)
+- 根据id清楚涂色
+
 ## add_observer(self, pos, radius)
 - 用于清除迷雾
 
@@ -99,6 +109,7 @@
 
 ## create_team(self, leader_objid, member_objid_list, team_id)
 - 编队  队员必须提前存在
+- 敌方编队则保存在dict  env.enemy_team_member中
 
 ## search_enemy_attack(self, objid_list='all', team_id=1, auth='normal', group='group1', pos='replace'):
 - 搜索敌人并攻击
@@ -111,16 +122,36 @@
 - 2  destObj   target or leader
 - 3  destPos   目标坐标
 
-## attack(self, objid_list, auth='normal', pos='replace')
+## attack(self, objid_list, auth='normal', pos='replace', walkType='run')
 - 攻击  
 - 若没有settargetact或searchenemyact指定target则无效
 
 ## set_target_objid(self, objid_list, targetObjID, auth='normal')
 - 强行指定攻击目标 还需再调attack才会攻击
 
+## add_strategy(self, strategy1, strategy2, pos, d)
+- 在字典d中新增一条策略strategy2
+- strategy1为一级面板文本
+- pos为小地图显示的绘制目标点
+
 ## get_enemy_nearby(self, team_id=1, mindis=30)
 - 寻找附近的敌人
 - return dict{id:dist}
+
+## _wait_for_open_panel(self,)
+- 决定当面板打开时应该显示什么
+
+## open_strategy_panel(self, d)
+- 在战术面板上显示指令
+
+## _wait_for_strategy(self, d, t)
+- 等待战术选择
+
+## _voice_check(self,)
+- 检查并处理语音指令
+
+## get_enemy_nearby(self, team_id=1, mindis=30)
+- return dict 附近敌人的objid:dis
 
 ## map_move(self, target_map_pos, objid_list='all', team_id=None, can_attack=True)
 - 按照5x5坐标移动
@@ -150,7 +181,7 @@
 - 请不要主动调用该函数
 - 围攻专用 因为目标点不一定可达所以2秒后强行下攻击指令
 
-## origin_ai(self, objid_list='all', team_id=-1)
+## origin_ai(self, objid_list='all', team_id=-1, move_attack=True)
 - 使用原本ai替换当前ai
 
 ## register(self, key, val)

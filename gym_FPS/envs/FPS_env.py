@@ -118,6 +118,9 @@ class FPSEnv(gym.Env):
             self.t3 = threading.Thread(target=self._voice_check)
             self.t3.start()
 
+        if self.is_enemy:
+            self.enemy_client = Client('127.0.0.1', 5123)
+
     def get_objid_list(self, name=1, pos=0):
         '''
         获取所有人id  名字和坐标可选
@@ -426,17 +429,20 @@ class FPSEnv(gym.Env):
         '''
         给方块区域涂色
         red, green, blue均为0-1的小数而不是0-255的uint8
+        alpha为透明度
+        return cube_id
         '''
         self.cube_id += 1
         cmd = 'cmd=drawcube`isDraw=1`index=%d`downleft=%d,%d,0`upright=%d,%d,0'%(self.cube_id, left, down, right, up)
         cmd += '`red=%f`green=%f`blue=%f`alpha=%f'%(red, green, blue, alpha)
         self.client.send(cmd)
+        return self.cube_id
 
     def remove_cube(self, cube_id):
         '''
         根据cube_id清除涂色
         '''
-        if cube_id >= self.cube_id:
+        if cube_id > self.cube_id:
             print('cube_id out of range')
             return False
         cmd = 'cmd=drawcube`isDraw=0`index=%d'%cube_id
@@ -454,7 +460,10 @@ class FPSEnv(gym.Env):
         cmd = 'cmd=add_chat`msg=%s`obj_id=%d' % (msg, obj_id)
         if close_time > 0:
             cmd += '`close_time=%d' % close_time
-        self.client.send(cmd)
+        if self.is_enemy:
+            self.enemy_client.send(cmd)
+        else:
+            self.client.send(cmd)
 
     def select_obj(self, objid, is_select=1):
         '''
@@ -482,7 +491,10 @@ class FPSEnv(gym.Env):
         name=[HelpWin|CtrlWin|ReplayWin|InfoWin|StatusWin|ChatWin|TaskWin]
         '''
         cmd = 'cmd=show_ui_win`name=%s`is_show=%d' % (name, is_show)
-        self.client.send(cmd)
+        if self.is_enemy:
+            self.enemy_client.send(cmd)
+        else:
+            self.client.send(cmd)
 
     def watch_obj(self, obj_id, is_watch=1):
         '''
@@ -585,12 +597,12 @@ class FPSEnv(gym.Env):
         # s = self.client.receive()
         return  # s
 
-    def attack(self, objid_list, auth='normal', pos='replace'):
+    def attack(self, objid_list, auth='normal', pos='replace', walkType='run'):
         '''
         攻击  若没有settargetact或searchenemyact指定target则无效
         '''
         cmd = "cmd=make_action`objid_list=%s`auth=%s`group=group1`pos=%s`ai=" % (list2str(objid_list), auth, pos)
-        cmd += '<check name="CheckTimeChk" interval="0"><action name="ShootAct"/><action name="MoveToPosAct" destObj="target" walkType="run"  reachDist="12"/></check>'
+        cmd += '<check name="CheckTimeChk" interval="0"><action name="ShootAct"/><action name="MoveToPosAct" destObj="target" walkType=%s  reachDist="12"/></check>'%walkType
         # print(cmd)
         self.client.send(cmd)
         # s = self.client.receive()
@@ -805,10 +817,10 @@ class FPSEnv(gym.Env):
         '''
         检查并处理语音指令
         '''
-        def work(s, word):
-            pos_list = [[], 
-                [125, -1, 95], [125, -1, 135], [165, -1, 95], [125, -1, 55], [85, -1, 95]
-            ]
+        pos_list = [[], 
+            [125, -1, 95], [125, -1, 135], [165, -1, 95], [125, -1, 55], [85, -1, 95]
+        ]
+        def work(s, word):            
             try:
                 l = s.split(word)
                 team_id = l[0]
@@ -834,12 +846,34 @@ class FPSEnv(gym.Env):
                 self.origin_ai(objid_list=objid_list, move_attack=False)
                 self.move(destPos=pos_list[area_id], objid_list=objid_list, walkType='run', pos='head')
             except:
-                self.add_chat('解析失败', 0)
+                self.add_chat('解析失败', 0, -1)
+
+        def plan(s):
+            idx = int(s[2:])
+            team_num = [[2,2,2,2,2], [2,5,1,1,1], [0,3,3,2,2]][idx]
+            area_id = 0
+            objid_list = []
+            while team_num[area_id] == 0:
+                area_id += 1
+            for uid, u_data in self.states.items():
+                if u_data['TEAM_ID'] < 0 and self.units[uid] != 'client_enemy':
+                    team_num[area_id] -= 1
+                    objid_list.append(uid)
+                    while team_num[area_id] == 0:
+                        print('run team %d'%area_id)
+                        self.origin_ai(objid_list=objid_list, move_attack=False)
+                        self.move(destPos=pos_list[area_id], objid_list=objid_list, walkType='run', pos='head')
+                        area_id += 1
+                        objid_list = []
+                        if area_id > 4:
+                            break
+
 
         def analyse(s):
             try:
                 if s.find('方案') > -1:
-                    pass
+                    if self.is_enemy:
+                        plan(s)
                 elif s.find('撤退') > -1:
                     work(s, '撤退')
                 elif s.find('转进') > -1:
@@ -861,10 +895,10 @@ class FPSEnv(gym.Env):
                 print('voice_check:', s)
                 self.client.confirm = ''
                 self.server_voice.buff = ''
-                self.add_chat(s, 0)
+                self.add_chat(s, 0, -1)
                 for _ in range(20):
                     if len(self.client.confirm) > 0:
-                        self.add_chat('语音指令确认' + s, 0)
+                        self.add_chat('语音指令确认' + s, 0, -1)
                         analyse(s)
                         self.client.confirm = ''
                         break
