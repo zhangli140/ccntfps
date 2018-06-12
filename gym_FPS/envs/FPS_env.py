@@ -602,7 +602,7 @@ class FPSEnv(gym.Env):
         攻击  若没有settargetact或searchenemyact指定target则无效
         '''
         cmd = "cmd=make_action`objid_list=%s`auth=%s`group=group1`pos=%s`ai=" % (list2str(objid_list), auth, pos)
-        cmd += '<check name="CheckTimeChk" interval="0"><action name="ShootAct"/><action name="MoveToPosAct" destObj="target" walkType=%s  reachDist="12"/></check>'%walkType
+        cmd += '<check name="CheckTimeChk" interval="0"><action name="ShootAct"/><action name="MoveToPosAct" destObj="target" walkType="%s"  reachDist="12"/></check>'%walkType
         # print(cmd)
         self.client.send(cmd)
         # s = self.client.receive()
