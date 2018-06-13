@@ -239,9 +239,9 @@ if __name__ == '__main__':
             env.client.strategy_select = ''
         env.stop = True
         if not fight:
-            s_, _ = env.decay_feature()
+            s, _ = env.decay_feature()
 
-            fight_prob = attack.calc_priority(s_)
+            fight_prob = attack.calc_priority(s)
             fight = np.argmax(fight_prob)
             if np.random.uniform(0, 1) < 0.05:
                 fight = np.random.randint(0, 2)
@@ -259,7 +259,7 @@ if __name__ == '__main__':
             print("Can't fight!!!")
             tcpClient.send('NO'.encode(encoding="utf-8"))
         tcpClient.close()
-        s = s_
+
         #编队
         temp_team = {1:[],2:[],3:[],4:[]}
         outside_pos_list=[[125,-1,175],[185,-1,155],[205,-1,95],[185,-1,35],[125,-1,15],[55,-1,35],[45,-1,95],[55,-1,155]]
@@ -274,6 +274,8 @@ if __name__ == '__main__':
 
         for team_id, objid_list in temp_team.items():
             env.create_team(-1, objid_list, team_id)
+
+        env.add_chat('调兵完成！', 0, -1)
 
 
 

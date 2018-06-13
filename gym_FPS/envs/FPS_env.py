@@ -67,7 +67,7 @@ class FPSEnv(gym.Env):
         pass
 
     def set_env(self, SEVERIP='127.0.0.1', SERVERPORT=5123, socket_DEBUG=False, env_DEBUG=False, speedup=1,
-                is_enemy=False):
+                is_enemy=False, is_5player=False):
         '''
         配置env
         '''
@@ -90,6 +90,7 @@ class FPSEnv(gym.Env):
 
         self.speedup = speedup
         self.is_enemy = is_enemy
+        self.is_5player = is_5player
 
         self.team_target = dict()
         self.team_member = dict()
