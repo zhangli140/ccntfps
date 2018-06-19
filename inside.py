@@ -223,8 +223,9 @@ if __name__ == '__main__':
     while not done:
         current_step += 1
 
-        action, solLayers = get_action(screen_my, 'myself', env)
-        print("action: {}".format(action))
+        # action, solLayers = get_action(screen_my, 'myself', env)
+        # print("action: {}".format(action))
+        action = [-1 for _ in range(len(env.units_id))]
 
         action_e, solLayers_e = get_action(screen_enemy, 'enemy', env, use_rule=True)
         print("action_e: {}".format(action_e))

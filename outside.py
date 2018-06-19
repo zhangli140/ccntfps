@@ -180,10 +180,13 @@ if __name__ == '__main__':
 
     s, _ = env.reset()
     input()#等待client启动
-    tcpClient = socket(AF_INET, SOCK_STREAM)
-    tcpClient.connect(addr)
-    tcpClient.send('init'.encode(encoding="utf-8"))            
-    tcpClient.close()
+    try:
+        tcpClient = socket(AF_INET, SOCK_STREAM)
+        tcpClient.connect(addr)
+        tcpClient.send('init'.encode(encoding="utf-8"))            
+        tcpClient.close()
+    except:
+        print('socket error')
 
     current_step = 0
     done = False
@@ -233,7 +236,9 @@ if __name__ == '__main__':
         
         if len(env.client.strategy_select):
             if env.client.strategy_select[0] == '0':
-                agm.Assign(env.assignment[int(env.client.strategy_select[2])], [0, 0, 0, 0, 0])
+                tp = env.assignment[int(env.client.strategy_select[2])]
+                agm.Assign(tp, [0, 0, 0, 0, 0])
+                print('选择方案%d,%d,%d,%d'%(tp[0],tp[1],tp[2],tp[3]))
             else:
                 fight = True
             env.client.strategy_select = ''
@@ -249,16 +254,20 @@ if __name__ == '__main__':
                 fight = False
             elif cant_f > 3:
                 fight = True
-
-        tcpClient = socket(AF_INET, SOCK_STREAM)
-        tcpClient.connect(addr)
-        if fight:
-            tcpClient.send('YES'.encode(encoding="utf-8"))
-            break
-        else:
-            print("Can't fight!!!")
-            tcpClient.send('NO'.encode(encoding="utf-8"))
-        tcpClient.close()
+            fight = False
+                
+        try:
+            tcpClient = socket(AF_INET, SOCK_STREAM)
+            tcpClient.connect(addr)
+            if fight:
+                tcpClient.send('YES'.encode(encoding="utf-8"))
+                break
+            else:
+                print("Can't fight!!!")
+                tcpClient.send('NO'.encode(encoding="utf-8"))
+            tcpClient.close()
+        except:
+            print('socket error')
 
         #编队
         temp_team = {1:[],2:[],3:[],4:[]}
@@ -279,12 +288,12 @@ if __name__ == '__main__':
 
 
 
-
+    
 
     screen = env.reset_fight()
     screen_my, screen_enemy = screen['screen_my'], screen['screen_enemy']
     
-    
+    print('开打')
     while not done:
         # 检测游戏是否挂掉了
         if not win32gui.FindWindow(0, 'Fps[服务器端:10000]'):
@@ -301,8 +310,9 @@ if __name__ == '__main__':
         action, solLayers = get_action(screen_my, 'myself', env)
         print("action: {}".format(action))
 
-        action_e, solLayers_e = get_action(screen_enemy, 'enemy', env, use_rule=True)
-        print("action_e: {}".format(action_e))
+        # action_e, solLayers_e = get_action(screen_enemy, 'enemy', env, use_rule=True)
+        # print("action_e: {}".format(action_e))
+        action_e = [-1 for _ in range(len(env.units_e_id))]
 
         s_, reward, done, unit_size_, unit_size_e_ = env.step([action, action_e])  # 执行完动作后的时间，time2
         print("reward: {}".format(reward))
@@ -313,7 +323,7 @@ if __name__ == '__main__':
         screen_my = screen_my_n
         screen_enemy = screen_enemy_n
 
-
+    print('over')
     if epi_flag:
         episodes += 1
         R = env.formation_reward()

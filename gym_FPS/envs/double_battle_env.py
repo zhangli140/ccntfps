@@ -120,17 +120,18 @@ class doubleBattleEnv(fc.FPSEnv):
         time.sleep(10)
 
         if not self.is_enemy:
-            self.add_obj(name="敌人1", is_enemy=True, pos=[125, -1, 100], leader_objid=-1, team_id=-1)
-            self.add_obj(name="敌人2", is_enemy=True, pos=[125, -1, 101], leader_objid=-1, team_id=-1)
-            self.add_obj(name="敌人3", is_enemy=True, pos=[125, -1, 99], leader_objid=-1, team_id=-1)
-            self.add_obj(name="敌人4", is_enemy=True, pos=[124, -1, 100], leader_objid=-1, team_id=-1)
-            self.add_obj(name="敌人5", is_enemy=True, pos=[126, -1, 100], leader_objid=-1, team_id=-1)
+            if not self.is_5player:
+                self.add_obj(name="敌人1", is_enemy=True, pos=[125, -1, 100], leader_objid=-1, team_id=-1)
+                self.add_obj(name="敌人2", is_enemy=True, pos=[125, -1, 101], leader_objid=-1, team_id=-1)
+                self.add_obj(name="敌人3", is_enemy=True, pos=[125, -1, 99], leader_objid=-1, team_id=-1)
+                self.add_obj(name="敌人4", is_enemy=True, pos=[124, -1, 100], leader_objid=-1, team_id=-1)
+                self.add_obj(name="敌人5", is_enemy=True, pos=[126, -1, 100], leader_objid=-1, team_id=-1)
 
-            self.add_obj(name="敌人6", is_enemy=True, pos=[124, -1, 101], leader_objid=-1, team_id=-1)
-            self.add_obj(name="敌人7", is_enemy=True, pos=[126, -1, 101], leader_objid=-1, team_id=-1)
-            self.add_obj(name="敌人8", is_enemy=True, pos=[124, -1, 99], leader_objid=-1, team_id=-1)
-            self.add_obj(name="敌人9", is_enemy=True, pos=[126, -1, 99], leader_objid=-1, team_id=-1)
-            self.add_obj(name="敌人10", is_enemy=True, pos=[127, -1, 100], leader_objid=-1, team_id=-1)
+                self.add_obj(name="敌人6", is_enemy=True, pos=[124, -1, 101], leader_objid=-1, team_id=-1)
+                self.add_obj(name="敌人7", is_enemy=True, pos=[126, -1, 101], leader_objid=-1, team_id=-1)
+                self.add_obj(name="敌人8", is_enemy=True, pos=[124, -1, 99], leader_objid=-1, team_id=-1)
+                self.add_obj(name="敌人9", is_enemy=True, pos=[126, -1, 99], leader_objid=-1, team_id=-1)
+                self.add_obj(name="敌人10", is_enemy=True, pos=[127, -1, 100], leader_objid=-1, team_id=-1)
 
             self.add_obj(name="队友1", is_enemy=False, pos=[125, -1, 180], leader_objid=-1, team_id=1)
             self.add_obj(name="队友2", is_enemy=False, pos=[125, -1, 181], leader_objid=-1, team_id=1)
@@ -154,7 +155,7 @@ class doubleBattleEnv(fc.FPSEnv):
         self.init_my_units = self.state['units_myself']
         #unit_size = len(self.state['units_myself'])
         #unit_size_e = len(self.state['units_enemy'])
-        self.add_observer([220, -1, 20], 2000) # disable the fog of war
+        #self.add_observer([220, -1, 20], 2000) # disable the fog of war
         self.pre_obs_myself = np.zeros((9,2), dtype=float)
         self.pre_obs_enemy = np.zeros((9,2), dtype=float)
         self.sup_outside = [[],[],[],[]]
@@ -162,6 +163,245 @@ class doubleBattleEnv(fc.FPSEnv):
         f_obs1, f_obs2 = self.decay_feature()
 
         return f_obs1, f_obs2
+
+    def _wait_for_open_panel(self,):
+        '''
+        决定当面板打开时应该显示什么
+        '''     
+        def get_word(l):
+            '''
+            根据分兵策略生成战术面板文字
+            '''
+            res = []
+            words = ['北门 ', '东门 ', '南门 ', '西门 ', '驻守中心 ']
+            for i, num in enumerate(l):
+                if num > 0:
+                    res.append(words[i] + str(int(num)))
+            return ','.join(res)
+
+        def get_point(l):
+            '''
+            根据分兵策略生成战术面板提示绿点
+            '''
+            if self.is_enemy:
+                point_list = [ [125, -1, 95], [125, -1, 135],[165, -1, 95], [125, -1, 55], [85, -1, 95]]
+            else:
+                point_list = [[125, -1, 175], [205, -1, 95], [125, -1, 15], [45, -1, 95]]
+            res = []
+            for i, num in enumerate(l):
+                for _ in range(int(num)):
+                    res.append(point_list[i])
+
+            for i in range(len(res)):
+                res[i][0] += (i - 5) // 3
+                res[i][2] += (i - 5) % 3
+
+            return res
+
+
+        def outer():
+            '''
+            by xiaoxiang
+            '''
+            def getpos(curpos):
+                p1=[125,175]
+                p2=[205,95]
+                p3=[125,15]
+                p4=[45,95]
+                p5=[125,95]
+                p6=[125,125]
+                p7=[155,95]
+                p8=[125,65]
+                p9=[95,95]
+                outerradius=30
+                innerradius=15
+                matrixcenter=[p1,p2,p3,p4,p5,p6,p7,p8,p9]
+                if isinner(curpos,matrixcenter[0],outerradius):
+                    return 1
+                if isinner(curpos,matrixcenter[1],outerradius):
+                    return 2
+                if isinner(curpos,matrixcenter[2],outerradius):
+                    return 3
+                if isinner(curpos,matrixcenter[3],outerradius):
+                    return 4
+                if isinner(curpos,matrixcenter[4],innerradius):
+                    return 5
+                if isinner(curpos,matrixcenter[5],innerradius):
+                    return 6
+                if isinner(curpos,matrixcenter[6],innerradius):
+                    return 7
+                if isinner(curpos,matrixcenter[7],innerradius):
+                    return 8
+                if isinner(curpos,matrixcenter[8],innerradius):
+                    return 9
+                return 0
+
+            def isinner(curpos,area,radius):
+                leftbottom=[area[0]-radius,area[1]-radius]
+                righttop=[area[0]+radius,area[1]+radius]
+                flag=False
+                if leftbottom[0]<=curpos[0] and leftbottom[1]<=curpos[1] and righttop[0]>=curpos[0] and righttop[1]>=curpos[1]:
+                    flag=True
+                return flag
+
+            def getfeature():
+                '''
+                changed some to speedup
+                '''
+                curfeaturepos=self.states
+                curenemylist=[0,0,0,0,0]
+                self._make_feature()
+                enemyteam=self.state['units_enemy']
+                #comradeteam=self.state['units_myself']
+                for playerid,state in curfeaturepos.items():
+                    if playerid in enemyteam:
+                        temp=state["POSITION"]
+                        curpos=[temp[0],temp[2]]
+                        index=getpos(curpos)
+                        if index>0:
+                            curenemylist[index-5]+=1
+                            
+                data, result=[], []
+                for i in range(11):
+                    for j in range(11-i):
+                        for k in range(11-i-j):
+                            m=10-i-j-k
+                            result.append([i,j,k,m])
+                            curposfeature=[i,j,k,m]
+                            curposfeature.extend(curenemylist)
+                            data.append(curposfeature)
+                            
+                pre = self.clf.predict_proba(data)[:,1]
+                return result[np.argmax(pre)]
+            return getfeature()
+
+
+        while True:
+            s = self.client.strategy_open
+            if len(s) > 0:
+                print('receive open')
+                d = {'Items': []}
+                str1 = get_word(self.assignment[0])
+                str2 = get_word(self.assignment[1])
+                green_point1 = get_point(self.assignment[0])
+                green_point2 = get_point(self.assignment[1])
+                if not self.is_enemy:
+                    print(outer())
+                    res_xx = outer()
+                    if len(self.assignment) < 3:
+                        self.assignment = np.concatenate([self.assignment, [res_xx]], 0)
+                    else:
+                        self.assignment[2] = res_xx
+                    str3 = get_word(res_xx)
+                    green_point3 = get_point(res_xx)
+                    self.add_strategy('分兵', [str1, str2, str3], [green_point1, green_point2, green_point3], d)
+                else:
+                    self.add_strategy('分兵', [str1, str2], [green_point1, green_point2], d)
+                
+                if len(self.assignment[0]) == 4:
+                    self.add_strategy('进攻', ['同时进入'], [[[125, -1, 100]]], d)
+                else:
+                    c_pos_list = []
+                    for _, ut in self.states.items():
+                        if (ut['TEAM_ID'] < 0 and self.is_enemy) or (ut['TEAM_ID'] > 0 and not self.is_enemy):
+                            c_pos_list.append(ut['POSITION'])
+                    self.add_strategy('驻守', ['原地防御'], [c_pos_list], d)
+                self.open_strategy_panel(d)
+
+                self.client.strategy_open=''
+
+
+    def _voice_check(self,):
+        '''
+        检查并处理语音指令
+        '''
+        pos_list = [[], 
+            [125, -1, 95], [125, -1, 135], [165, -1, 95], [125, -1, 55], [85, -1, 95]
+        ]
+        def work(s, word):            
+            try:
+                l = s.split(word)
+                team_id = l[0]
+                area_id = int(l[1])
+                if self.is_enemy:
+                    if team_id.find('队') > -1:
+                        objid_list = self.enemy_team_member[-int(team_id[:-1])]
+                    elif team_id[-1] == '号':
+                        objid_list = [int(team_id[:-1])]
+                    else:
+                        objid_list = [int(team_id)]
+                    for uid in objid_list:
+                        self.pushed_cmd_excuting[uid] = [1, pos_list[area_id][0], pos_list[area_id][2]]
+                else:
+                    if team_id.find('队') > -1:
+                        objid_list = self.enemy_team_member[int(team_id[:-1])]
+                    elif team_id[-1] == '号':
+                        objid_list = [int(team_id[:-1])]
+                    else:
+                        objid_list = [int(team_id)]
+                    for uid in objid_list:
+                        self.pushed_cmd_excuting[uid] = [1, pos_list[area_id][0], pos_list[area_id][2]]
+                self.origin_ai(objid_list=objid_list, move_attack=False)
+                self.move(destPos=pos_list[area_id], objid_list=objid_list, walkType='run', pos='head')
+                print(objid_list)
+            except:
+                self.add_chat('解析失败', 0, -1)
+
+        def plan(s):
+            idx = int(s[2:])
+            team_num = [[2,2,2,2,2], [2,5,1,1,1], [0,3,3,2,2]][idx]
+            area_id = 0
+            objid_list = []
+            while team_num[area_id] == 0:
+                area_id += 1
+            for uid, u_data in self.states.items():
+                if u_data['TEAM_ID'] < 0 and self.units[uid] != 'client_enemy':
+                    team_num[area_id] -= 1
+                    objid_list.append(uid)
+                    while team_num[area_id] == 0:
+                        print('run team %d'%area_id)
+                        self.origin_ai(objid_list=objid_list, move_attack=False)
+                        self.move(destPos=pos_list[area_id], objid_list=objid_list, walkType='run', pos='head')
+                        area_id += 1
+                        objid_list = []
+                        if area_id > 4:
+                            break
+
+
+        def analyse(s):
+            try:
+                if s.find('方案') > -1:
+                    if self.is_enemy:
+                        plan(s)
+                elif s.find('撤退') > -1:
+                    work(s, '撤退')
+                elif s.find('转进') > -1:
+                    pass
+                elif s.find('攻击') > -1:
+                    work(s, '攻击')
+                elif s.find('进攻') > -1:
+                    work(s, '进攻')
+                elif s.find('支援') > -1:
+                    work(s, '支援')
+                elif s.find('编队') > -1:
+                    pass
+            except:
+                print('except')
+            
+        while True:
+            if len(self.server_voice.buff) > 0:
+                s = self.server_voice.buff
+                print('voice_check:', s)
+                self.client.confirm = ''
+                self.server_voice.buff = ''
+                self.add_chat(s, 0, -1)
+                for _ in range(20):
+                    if len(self.client.confirm) > 0:
+                        self.add_chat('语音指令确认' + s, 0, -1)
+                        analyse(s)
+                        self.client.confirm = ''
+                        break
+                    time.sleep(0.1)
 
     def pushedCmdMonitor(self):
         while self.pushed_cmd_excuting_switch and not self.state['game_over']:

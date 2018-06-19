@@ -2,7 +2,7 @@
 speed=1
 frame_skip=9
 serverip=210.32.155.16
-clientip=10.180.10.127
+clientip=183.129.170.182
 serverport=5130
 sleeptime=3
 max_dist=100
