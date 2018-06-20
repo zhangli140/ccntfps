@@ -167,7 +167,7 @@ if __name__ == '__main__':
     env.set_env('127.0.0.1', 5123, socket_DEBUG=False, env_DEBUG=False, speedup=CONFIG.speed, is_enemy=False)
 
     agm = Assignment(env)    # env.restart(port=args.port)
-    env.assignment = np.zeros((3, 4), dtype=np.int32)    
+    #env.assignment = np.zeros((3, 4), dtype=np.int32)    
 
     env.seed(123)
     print("finish init env!")

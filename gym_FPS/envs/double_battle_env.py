@@ -288,19 +288,13 @@ class doubleBattleEnv(fc.FPSEnv):
                 if not self.is_enemy:
                     print(outer())
                     res_xx = outer()
-                    if len(self.assignment) < 3:
-                        self.assignment = np.concatenate([self.assignment, [res_xx]], 0)
-                    else:
-                        self.assignment[2] = res_xx
+                    self.assignment[2] = res_xx
                     str3 = get_word(res_xx)
                     green_point3 = get_point(res_xx)
                     self.add_strategy('分兵', [str1, str2, str3], [green_point1, green_point2, green_point3], d)
-                else:
-                    self.add_strategy('分兵', [str1, str2], [green_point1, green_point2], d)
-                
-                if len(self.assignment[0]) == 4:
                     self.add_strategy('进攻', ['同时进入'], [[[125, -1, 100]]], d)
                 else:
+                    self.add_strategy('分兵', [str1, str2], [green_point1, green_point2], d)
                     c_pos_list = []
                     for _, ut in self.states.items():
                         if (ut['TEAM_ID'] < 0 and self.is_enemy) or (ut['TEAM_ID'] > 0 and not self.is_enemy):

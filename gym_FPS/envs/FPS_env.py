@@ -102,8 +102,10 @@ class FPSEnv(gym.Env):
         self.path_id = 0
         self.cube_id = 0
         self.episode_id = 1
-        
-        self.assignment = None
+        if is_enemy:
+            self.assignment = np.zeros((3, 5), dtype=np.int32)
+        else:
+            self.assignment = np.zeros((3, 4), dtype=np.int32)
         self.cpos_list1 = []
         self.cpos_list2 = []
 		
@@ -114,8 +116,9 @@ class FPSEnv(gym.Env):
             self.thread_flag = False
             self.t1 = threading.Thread(target=self._get_game_variable)
             self.t1.start()
-            self.t2 = threading.Thread(target=self._wait_for_open_panel)
-            self.t2.start()
+            if not is_enemy:
+                self.t2 = threading.Thread(target=self._wait_for_open_panel)
+                self.t2.start()
             self.t3 = threading.Thread(target=self._voice_check)
             self.t3.start()
 
