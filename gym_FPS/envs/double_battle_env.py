@@ -392,15 +392,25 @@ class doubleBattleEnv(fc.FPSEnv):
             if len(self.server_voice.buff) > 0:
                 s = self.server_voice.buff
                 print('voice_check:', s)
-                self.client.confirm = ''
+                if self.is_enemy:
+                    self.enemy_client.confirm = ''
+                else:
+                    self.client.confirm = ''
                 self.server_voice.buff = ''
                 self.add_chat(s, 0, -1)
                 for _ in range(20):
-                    if len(self.client.confirm) > 0:
-                        self.add_chat('语音指令确认' + s, 0, -1)
-                        analyse(s)
-                        self.client.confirm = ''
-                        break
+                    if self.is_enemy:
+                        if len(self.enemy_client.confirm) > 0:
+                            self.add_chat('语音指令确认' + s, 0, -1)
+                            analyse(s)
+                            self.enemy_client.confirm = ''
+                            break
+                    else:
+                        if len(self.client.confirm) > 0:
+                            self.add_chat('语音指令确认' + s, 0, -1)
+                            analyse(s)
+                            self.client.confirm = ''
+                            break
                     time.sleep(0.1)
 
     def pushedCmdMonitor(self):

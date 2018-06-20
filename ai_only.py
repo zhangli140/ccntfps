@@ -39,16 +39,11 @@ if not os.path.exists(args.result + '/model'):
     os.mkdir(args.result + '/model')
 if not os.path.exists(args.result + '/model_e'):
     os.mkdir(args.result + '/model_e')
-if not os.path.exists(args.result + '/p_model'):
-    os.mkdir(args.result + '/p_model')
 if not os.path.exists(args.result + '/p_model_e'):
     os.mkdir(args.result + '/p_model_e')
-if not os.path.exists(args.result + '/d_model'):
-    os.mkdir(args.result + '/d_model')
 if not os.path.exists(args.result + '/d_model_e'):
     os.mkdir(args.result + '/d_model_e')
-if not os.path.exists(args.result + '/f_model'):
-    os.mkdir(args.result + '/f_model')
+
 
 os.environ["CUDA_DEVICES_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -57,13 +52,16 @@ batch_size = 16
 
 command_size = 9
 resolution = (255, 255)
-
 #host = '7.201.221.113'
 #host = '7.201.238.223'
 #host = '10.212.47.241'
 host = CONFIG.clientip
 port = 12345
 addr = (host, port)
+
+tcpServer = socket(AF_INET, SOCK_STREAM)
+tcpServer.bind(addr)
+tcpServer.listen(5)
 
 def wf(str, flag):
     if flag == 0:
@@ -119,9 +117,10 @@ def wfTo(filepath, str):
     F_battle.write(str + '\n')
     F_battle.close()
 
+
 if __name__ == '__main__':
     buffer_size = 10000
-    point_list = [[125, -1, 175], [205, -1, 95], [125, -1, 15], [45, -1, 95]]
+    point_list = [ [125, -1, 95], [125, -1, 135],[165, -1, 95], [125, -1, 55], [85, -1, 95]]
 
     permutation_outside = list(permutations([0, 1, 2, 3]))
     permutation_inside = list(permutations([0, 1, 2, 3, 4]))
@@ -164,10 +163,10 @@ if __name__ == '__main__':
     # ----------------------------------init env------------------------------------------
     env = gym.make('FPSDouble-v0')
     print("begin init env....")
-    env.set_env('127.0.0.1', 5123, socket_DEBUG=False, env_DEBUG=False, speedup=CONFIG.speed, is_enemy=False)
+    env.set_env(CONFIG.serverip, 5123, socket_DEBUG=False, env_DEBUG=False, speedup=CONFIG.speed, is_enemy=True)
 
     agm = Assignment(env)    # env.restart(port=args.port)
-    env.assignment = np.zeros((3, 4), dtype=np.int32)    
+    env.assignment = np.zeros((2, 5))
 
     env.seed(123)
     print("finish init env!")
@@ -178,160 +177,107 @@ if __name__ == '__main__':
     var = 0.2
     win_rate = []
 
-    s, _ = env.reset()
-    input()#等待client启动
-    try:
-        tcpClient = socket(AF_INET, SOCK_STREAM)
-        tcpClient.connect(addr)
-        tcpClient.send('init'.encode(encoding="utf-8"))            
-        tcpClient.close()
-    except:
-        print('socket error')
-
-    current_step = 0
-    done = False
-    rewards = []
-    epi_flag = True
-    tmp_loss = 0
-    reward = 0
-    cumulative_reward = 0
-    fight = False
-    cant_f = 0
-    print("finish reset env!")
-    
-    while not fight:
-        cant_f += 1
-        # formation algorithm
-        prio_prob = Priority.calc_priority(s)
-        prio_argm = np.argmax(prio_prob)
-        if np.random.uniform(0, 1) < 0.05:
-            prio_argm = np.random.randint(0, len(permutation_outside))
-        prio = list(permutation_outside[prio_argm])
-
-        s_sorted = dispatch_sort(s, prio)
-        dpt_prob = dispatcher.calc_priority(s_sorted)
-
-        dpt_argm_1 = np.argmax(dpt_prob)
-        dpt_prob[dpt_argm_1] = -1
-        dpt_argm_2 = np.argmax(dpt_prob)
-        assign_p_1 = assign_sort(dpt_out[dpt_argm_1], prio)
-        assign_p_2 = assign_sort(dpt_out[dpt_argm_2], prio)
-
-        env.assignment = np.array([assign_p_1, assign_p_2, env.assignment[2]])
-        print(env.assignment[2])
-        env.cpos_list1 = []
-        env.cpos_list2 = []
-        for i in range(4):
-            for j in range(assign_p_1[i]):
-                env.cpos_list1.append([point_list[i][0], point_list[i][2]])
-            for j in range(assign_p_2[i]):
-                env.cpos_list2.append([point_list[i][0], point_list[i][2]])
-        print(229)
-        #agm.Assign(assign_p_1, [0, 0, 0, 0, 0])
-        env.stop = False
-        threading.Thread(target=agm.Assign, args=(env.assignment[0], [0, 0, 0, 0, 0])).start()
-        while len(env.client.strategy_select) < 1 and env.stop is False:
-            time.sleep(1)
-        print(235)
+    while episodes < 10000:
+        recv = None
         
-        if len(env.client.strategy_select):
-            if env.client.strategy_select[0] == '0':
-                tp = env.assignment[int(env.client.strategy_select[2])]
-                agm.Assign(tp, [0, 0, 0, 0, 0])
-                print('选择方案%d,%d,%d,%d'%(tp[0],tp[1],tp[2],tp[3]))
-            else:
-                fight = True
-            env.client.strategy_select = ''
-        env.stop = True
-        if not fight:
-            s, _ = env.decay_feature()
+        _, s_enemy = env.reset()
+        
+        recv = None
+        current_step = 0
+        done = False
+        rewards = []
+        epi_flag = True
+        tmp_loss = 0
+        reward = 0
+        cumulative_reward = 0
+        fight = False
+        cant_f = 0
+        print("finish reset env!")
 
-            fight_prob = attack.calc_priority(s)
-            fight = np.argmax(fight_prob)
+        while not fight:
+            cant_f += 1
+            # formation algorithm
+            prio_prob_e = Priority_e.calc_priority(s_enemy)
+            prio_argm_e = np.argmax(prio_prob_e)
             if np.random.uniform(0, 1) < 0.05:
-                fight = np.random.randint(0, 2)
-            if cant_f == 1:
-                fight = False
-            elif cant_f > 3:
-                fight = True
-            fight = False
+                prio_argm_e = np.random.randint(0, len(permutation_inside))
+            prio_e = list(permutation_inside[prio_argm_e])
 
-        #编队
-        temp_team = {1:[], 2:[], 3:[], 4:[]}
-        outside_pos_list=[[125,-1,175],[185,-1,155],[205,-1,95],[185,-1,35],[125,-1,15],[55,-1,35],[45,-1,95],[55,-1,155]]
-        for uid, u_data in env.states.items():
-            if u_data['TEAM_ID'] > 0:
-                x = u_data['POSITION'][0]
-                y = u_data['POSITION'][2]
-                for i in range(4):
-                    if abs(x-outside_pos_list[i*2][0]) + abs(y-outside_pos_list[i*2][2]) < 12:
-                        temp_team[i+1].append(uid)
-                        break
+            s_sorted_e = dispatch_sort(s_enemy, prio_e)
+            dpt_prob_e = dispatcher_e.calc_priority(s_sorted_e)
 
-        for team_id, objid_list in temp_team.items():
-            env.create_team(-1, objid_list, team_id)  
+            dpt_argm_e_1 = np.argmax(dpt_prob_e)
+            dpt_prob_e[dpt_argm_e_1] = -1
+            dpt_argm_e_2 = np.argmax(dpt_prob_e)
+            assign_p_e_1 = assign_sort(dpt_in[dpt_argm_e_1], prio_e)
+            assign_p_e_2 = assign_sort(dpt_in[dpt_argm_e_2], prio_e)
 
-        try:
-            tcpClient = socket(AF_INET, SOCK_STREAM)
-            tcpClient.connect(addr)
-            if fight:
-                tcpClient.send('YES'.encode(encoding="utf-8"))
-                break
-            else:
-                print("Can't fight!!!")
-                tcpClient.send('NO'.encode(encoding="utf-8"))
-            tcpClient.close()
-        except:
-            print('socket error')
+            env.cpos_list1 = []
+            env.cpos_list2 = []
+            print(assign_p_e_1)
+            for i in range(5):
+                for j in range(assign_p_e_1[i]):
+                    env.cpos_list1.append([point_list[i][0], point_list[i][2]])
+                for j in range(assign_p_e_2[i]):
+                    env.cpos_list2.append([point_list[i][0], point_list[i][2]])
 
-        env.add_chat('调兵完成！', 0, -1)
+            copyagn1 = [assign_p_e_1[1], assign_p_e_1[2], assign_p_e_1[3], assign_p_e_1[4], assign_p_e_1[0]]
+            copyagn2 = [assign_p_e_2[1], assign_p_e_2[2], assign_p_e_2[3], assign_p_e_2[4], assign_p_e_2[0]]
+            env.assignment = np.array([copyagn1, copyagn2])
+
+            env.stop = False
+            threading.Thread(target=agm.Assign, args=([0, 0, 0, 0], assign_p_e_1)).start()
+            while len(env.client.strategy_select) < 1 and env.stop is False:
+                time.sleep(1)
+            env.stop = True
+            if len(env.client.strategy_select):
+                if env.client.strategy_select[0] == '0':
+                    cp = env.assignment[int(env.client.strategy_select[2])]
+                    copyagn = [cp[4], cp[0], cp[1], cp[2], cp[3]]
+                    agm.Assign([0, 0, 0, 0], copyagn)
+                else:
+                    fight = True
+
+            if not fight:
+                _, s_enemy_ = env.decay_feature()
+                s_enemy = s_enemy_
+                tcpClient, _ = tcpServer.accept()
+                recv = tcpClient.recv(1024).decode(encoding="utf-8")
+                tcpClient.close()
+                if recv == 'YES':
+                    fight = True
+
+        screen = env.reset_fight()
+        screen_my, screen_enemy = screen['screen_my'], screen['screen_enemy']
 
 
+        while not done:
+            current_step += 1
 
-    
+            action, solLayers = get_action(screen_my, 'myself', env)
+            print("action: {}".format(action))
 
-    screen = env.reset_fight()
-    screen_my, screen_enemy = screen['screen_my'], screen['screen_enemy']
-    
-    print('开打')
-    while not done:
-        # 检测游戏是否挂掉了
-        if not win32gui.FindWindow(0, 'Fps[服务器端:10000]'):
-            env.__del__()
-            env = gym.make('FPSDouble-v0')
-            env.set_env(args.ip, args.port, socket_DEBUG=False, env_DEBUG=False, speedup=CONFIG.speed, is_enemy=False)
-            env.seed(123)
-            print("restart")
-            epi_flag = False
-            break
+            action_e, solLayers_e = get_action(screen_enemy, 'enemy', env, use_rule=True)
+            print("action_e: {}".format(action_e))
 
-        current_step += 1
+            s_, reward, done, unit_size_, unit_size_e_ = env.step([action, action_e])  # 执行完动作后的时间，time2
+            print("reward: {}".format(reward))
 
-        action, solLayers = get_action(screen_my, 'myself', env)
-        print("action: {}".format(action))
+            screen_my_n = s_['screen_my']
+            screen_enemy_n = s_['screen_enemy']
 
-        # action_e, solLayers_e = get_action(screen_enemy, 'enemy', env, use_rule=True)
-        # print("action_e: {}".format(action_e))
-        action_e = [-1 for _ in range(len(env.units_e_id))]
+            screen_my = screen_my_n
+            screen_enemy = screen_enemy_n
 
-        s_, reward, done, unit_size_, unit_size_e_ = env.step([action, action_e])  # 执行完动作后的时间，time2
-        print("reward: {}".format(reward))
 
-        screen_my_n = s_['screen_my']
-        screen_enemy_n = s_['screen_enemy']
-
-        screen_my = screen_my_n
-        screen_enemy = screen_enemy_n
-
-    print('over')
-    if epi_flag:
-        episodes += 1
-        R = env.formation_reward()
-        if R > 0:
-            battles_won += 1
-        if episodes % 50 == 0:
-            win_rate.append(battles_won / 50)
-            print('episodes: ', episodes, 'win_rate: ', battles_won / 50, 'cum_win_rate:', np.mean(win_rate))
-            battles_won = 0
-            env.restart()
-
+        if epi_flag:
+            episodes += 1
+            R = env.formation_reward()
+            if R > 0:
+                battles_won += 1
+            if episodes % 50 == 0:
+                win_rate.append(battles_won / 50)
+                print('episodes: ', episodes, 'win_rate: ', battles_won / 50, 'cum_win_rate:', np.mean(win_rate))
+                battles_won = 0
+                env.restart()
+        tcpServer.close()
