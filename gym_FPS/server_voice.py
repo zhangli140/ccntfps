@@ -19,6 +19,7 @@ class Server(object):
     def _wait_for_connect(self,):
         while True:
             self.c, self.addr = self.sock.accept()
+            print('server_voice accept')
             try:
                 while True:
                     data = self._receive()
@@ -36,5 +37,6 @@ class Server(object):
                 if self.DEBUG:
                     print('recv', data.decode('gbk'))
                 return data
+            return ''
         except:
             print('received time out!')

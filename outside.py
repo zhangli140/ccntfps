@@ -229,8 +229,9 @@ if __name__ == '__main__':
         print(229)
         #agm.Assign(assign_p_1, [0, 0, 0, 0, 0])
         env.stop = False
+        env.pause = False
         threading.Thread(target=agm.Assign, args=(env.assignment[0], [0, 0, 0, 0, 0])).start()
-        while len(env.client.strategy_select) < 1 and env.stop is False:
+        while (len(env.client.strategy_select) < 1 and env.stop is False) or (env.pause and env.stop):
             time.sleep(1)
         print(235)
         
@@ -245,7 +246,10 @@ if __name__ == '__main__':
         env.stop = True
         if not fight:
             s, _ = env.decay_feature()
-
+            st='侦测到上轮地方状态:'
+            for idx in range(4,9):
+                st+='%d,'%s[idx,2]
+            env.add_chat(st, 0)
             fight_prob = attack.calc_priority(s)
             fight = np.argmax(fight_prob)
             if np.random.uniform(0, 1) < 0.05:

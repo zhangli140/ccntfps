@@ -316,35 +316,43 @@ class doubleBattleEnv(fc.FPSEnv):
             try:
                 l = s.split(word)
                 team_id = l[0]
-                area_id = int(l[1])
-                if self.is_enemy:
-                    if team_id.find('队') > -1:
-                        objid_list = self.enemy_team_member[-int(team_id[:-1])]
-                    elif team_id[-1] == '号':
-                        objid_list = [int(team_id[:-1])]
-                    else:
-                        objid_list = [int(team_id)]
-                    for uid in objid_list:
-                        self.pushed_cmd_excuting[uid] = [1, pos_list[area_id][0], pos_list[area_id][2]]
+                if l[1][-1] == '号':
+                    target_id = int(l[1][:-1])
+                    flag = 0
                 else:
-                    if team_id.find('队') > -1:
-                        objid_list = self.enemy_team_member[int(team_id[:-1])]
-                    elif team_id[-1] == '号':
-                        objid_list = [int(team_id[:-1])]
+                    flag = 1
+                    if l[1][-1] == '区':
+                        area_id = int(l[1][:-1])
                     else:
-                        objid_list = [int(team_id)]
-                    for uid in objid_list:
-                        self.pushed_cmd_excuting[uid] = [1, pos_list[area_id][0], pos_list[area_id][2]]
+                        area_id = int(l[1])
+                if team_id.find('队') > -1:
+                    if self.is_enemy:
+                        objid_list = self.enemy_team_member[-int(team_id[:-1])]
+                    else:
+                        objid_list = self.team_member[int(team_id[:-1])]
+                elif team_id[-1] == '号':
+                    objid_list = [int(team_id[:-1])]
+                else:
+                    objid_list = [int(team_id)]
+                for uid in objid_list:
+                    if flag == 1:
+                        pce = [1, pos_list[area_id][0], pos_list[area_id][2]]
+                    else:
+                        pce = [0, target_id]
+                    self.pushed_cmd_excuting[uid] = pce
                 self.origin_ai(objid_list=objid_list, move_attack=False)
-                self.move(destPos=pos_list[area_id], objid_list=objid_list, walkType='run', pos='head')
+                if flag == 1:
+                    self.move(destPos=pos_list[area_id], objid_list=objid_list, walkType='run', pos='head')
+                else:
+                    self.setTargetAndAttack(objid_list=objid_list, targetObjID=target_id)
                 print(objid_list)
             except:
                 self.add_chat('解析失败', 0, -1)
 
         def plan(s):
             idx = int(s[2:])
-            team_num = [[2,2,2,2,2], [2,5,1,1,1], [0,3,3,2,2]][idx]
-            area_id = 0
+            team_num = [[0,2,2,2,2,2], [0,2,5,1,1,1], [0,0,3,3,2,2], [0,0,1,2,5,2]][idx]
+            area_id = 1
             objid_list = []
             while team_num[area_id] == 0:
                 area_id += 1
@@ -358,13 +366,19 @@ class doubleBattleEnv(fc.FPSEnv):
                         self.move(destPos=pos_list[area_id], objid_list=objid_list, walkType='run', pos='head')
                         area_id += 1
                         objid_list = []
-                        if area_id > 4:
+                        if area_id > 5:
                             break
 
 
         def analyse(s):
             try:
-                if s.find('方案') > -1:
+                if s=='重算':
+                    self.stop=True
+                    self.pause=False
+                elif s=='暂停':
+                    self.stop=True
+                    self.pause=True                    
+                elif s.find('方案') > -1:
                     if self.is_enemy:
                         plan(s)
                 elif s.find('撤退') > -1:
