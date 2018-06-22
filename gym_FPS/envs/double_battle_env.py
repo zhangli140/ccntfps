@@ -120,6 +120,7 @@ class doubleBattleEnv(fc.FPSEnv):
         time.sleep(10)
 
         if not self.is_enemy:
+            time.sleep(10)
             if not self.is_5player:
                 self.add_obj(name="敌人1", is_enemy=True, pos=[125, -1, 100], leader_objid=-1, team_id=-1)
                 self.add_obj(name="敌人2", is_enemy=True, pos=[125, -1, 101], leader_objid=-1, team_id=-1)

@@ -187,6 +187,7 @@ if __name__ == '__main__':
         tcpClient.close()
     except:
         print('socket error')
+    input()#等待client重新连接完成
 
     current_step = 0
     done = False
