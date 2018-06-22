@@ -163,6 +163,7 @@ if __name__ == '__main__':
     # ----------------------------------init env------------------------------------------
     env = gym.make('FPSDouble-v0')
     print("begin init env....")
+    time.sleep(5)
     env.set_env(CONFIG.serverip, 5123, socket_DEBUG=False, env_DEBUG=False, speedup=CONFIG.speed, is_enemy=True)
 
     agm = Assignment(env)    # env.restart(port=args.port)

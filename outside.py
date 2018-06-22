@@ -177,9 +177,9 @@ if __name__ == '__main__':
     battles_won_total = 0
     var = 0.2
     win_rate = []
-
-    s, _ = env.reset()
+    
     input()#等待client启动
+    s, _ = env.reset()
     try:
         tcpClient = socket(AF_INET, SOCK_STREAM)
         tcpClient.connect(addr)

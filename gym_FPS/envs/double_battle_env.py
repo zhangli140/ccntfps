@@ -384,7 +384,7 @@ class doubleBattleEnv(fc.FPSEnv):
                 elif s.find('撤退') > -1:
                     work(s, '撤退')
                 elif s.find('转进') > -1:
-                    pass
+                    work(s, '转进')
                 elif s.find('攻击') > -1:
                     work(s, '攻击')
                 elif s.find('进攻') > -1:
