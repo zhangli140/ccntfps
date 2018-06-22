@@ -246,10 +246,6 @@ if __name__ == '__main__':
         env.stop = True
         if not fight:
             s, _ = env.decay_feature()
-            st='侦测到上轮地方状态:'
-            for idx in range(4,9):
-                st+='%d,'%s[idx,2]
-            env.add_chat(st, 0)
             fight_prob = attack.calc_priority(s)
             fight = np.argmax(fight_prob)
             if np.random.uniform(0, 1) < 0.05:
@@ -260,6 +256,10 @@ if __name__ == '__main__':
                 fight = True
             fight = False
 
+        st='侦测到上轮敌方状态:'
+        for idx in range(4,9):
+            st+='%d,'%s[idx,2]
+        env.add_chat(st, 0)
         #编队
         temp_team = {1:[], 2:[], 3:[], 4:[]}
         outside_pos_list=[[125,-1,175],[185,-1,155],[205,-1,95],[185,-1,35],[125,-1,15],[55,-1,35],[45,-1,95],[55,-1,155]]

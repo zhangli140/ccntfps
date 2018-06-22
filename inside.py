@@ -227,7 +227,7 @@ if __name__ == '__main__':
         # print("action: {}".format(action))
         action = [-1 for _ in range(len(env.units_id))]
 
-        action_e, solLayers_e = get_action(screen_enemy, 'enemy', env, use_rule=True)
+        action_e, solLayers_e = get_action(screen_enemy, 'enemy', env)
         print("action_e: {}".format(action_e))
 
         s_, reward, done, unit_size_, unit_size_e_ = env.step([action, action_e])  # 执行完动作后的时间，time2

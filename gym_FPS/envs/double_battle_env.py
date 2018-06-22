@@ -83,7 +83,7 @@ class doubleBattleEnv(fc.FPSEnv):
         th2.start()
 
         self.mc = list()
-        if 'client_enemy' in self.units.keys():
+        if 'client_enemy' in self.units.values():
             self.mc.append(utils.get_key_from_value(d=self.units, v='client_enemy'))
         
         return self.obs
