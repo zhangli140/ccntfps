@@ -199,44 +199,20 @@ if __name__ == '__main__':
             # formation algorithm
             prio_prob_e = Priority_e.calc_priority(s_enemy)
             prio_argm_e = np.argmax(prio_prob_e)
-            if np.random.uniform(0, 1) < 0.05:
+            if np.random.rand() < 0.05:
                 prio_argm_e = np.random.randint(0, len(permutation_inside))
             prio_e = list(permutation_inside[prio_argm_e])
 
             s_sorted_e = dispatch_sort(s_enemy, prio_e)
             dpt_prob_e = dispatcher_e.calc_priority(s_sorted_e)
 
-            dpt_argm_e_1 = np.argmax(dpt_prob_e)
-            dpt_prob_e[dpt_argm_e_1] = -1
-            dpt_argm_e_2 = np.argmax(dpt_prob_e)
-            assign_p_e_1 = assign_sort(dpt_in[dpt_argm_e_1], prio_e)
-            assign_p_e_2 = assign_sort(dpt_in[dpt_argm_e_2], prio_e)
-
-            env.cpos_list1 = []
-            env.cpos_list2 = []
-            print(assign_p_e_1)
-            for i in range(5):
-                for j in range(assign_p_e_1[i]):
-                    env.cpos_list1.append([point_list[i][0], point_list[i][2]])
-                for j in range(assign_p_e_2[i]):
-                    env.cpos_list2.append([point_list[i][0], point_list[i][2]])
-
-            copyagn1 = [assign_p_e_1[1], assign_p_e_1[2], assign_p_e_1[3], assign_p_e_1[4], assign_p_e_1[0]]
-            copyagn2 = [assign_p_e_2[1], assign_p_e_2[2], assign_p_e_2[3], assign_p_e_2[4], assign_p_e_2[0]]
-            env.assignment = np.array([copyagn1, copyagn2])
+            dpt_argm_e = np.argmax(dpt_prob_e)
+            if np.random.rand() < 0.05:
+                 prio_argm_e = np.random.randint(0, len(dpt_in))
+            assign_p_e = assign_sort(dpt_in[dpt_argm_e], prio_e)
 
             env.stop = False
-            threading.Thread(target=agm.Assign, args=([0, 0, 0, 0], assign_p_e_1)).start()
-            while len(env.client.strategy_select) < 1 and env.stop is False:
-                time.sleep(1)
-            env.stop = True
-            if len(env.client.strategy_select):
-                if env.client.strategy_select[0] == '0':
-                    cp = env.assignment[int(env.client.strategy_select[2])]
-                    copyagn = [cp[4], cp[0], cp[1], cp[2], cp[3]]
-                    agm.Assign([0, 0, 0, 0], copyagn)
-                else:
-                    fight = True
+            agm.Assign([0, 0, 0, 0], assign_p_e)
 
             if not fight:
                 _, s_enemy_ = env.decay_feature()

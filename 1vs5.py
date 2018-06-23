@@ -203,8 +203,10 @@ if __name__ == '__main__':
         dpt_argm_1 = np.argmax(dpt_prob)
         dpt_prob[dpt_argm_1] = -1
         dpt_argm_2 = np.argmax(dpt_prob)
-        assign_p_1 = assign_sort(dpt_out[dpt_argm_1], prio)
-        assign_p_2 = assign_sort(dpt_out[dpt_argm_2], prio)
+        assign_p_1 = np.array(assign_sort(dpt_out[dpt_argm_1], prio))//2
+        assign_p_1[-1] = 5 - sum(assign_p_1[:-1])
+        assign_p_2 = np.array(assign_sort(dpt_out[dpt_argm_2], prio))//2
+        assign_p_2[-1] = 5 - sum(assign_p_2[:-1])
 
         env.assignment = np.array([assign_p_1, assign_p_2, env.assignment[2]])
         print(env.assignment[2])

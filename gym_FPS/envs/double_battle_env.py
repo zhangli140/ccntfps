@@ -140,11 +140,12 @@ class doubleBattleEnv(fc.FPSEnv):
             self.add_obj(name="队友4", is_enemy=False, pos=[124, -1, 180], leader_objid=-1, team_id=1)
             self.add_obj(name="队友5", is_enemy=False, pos=[126, -1, 180], leader_objid=-1, team_id=1)
 
-            self.add_obj(name="队友6", is_enemy=False, pos=[124, -1, 181], leader_objid=-1, team_id=1)
-            self.add_obj(name="队友7", is_enemy=False, pos=[126, -1, 181], leader_objid=-1, team_id=1)
-            self.add_obj(name="队友8", is_enemy=False, pos=[124, -1, 179], leader_objid=-1, team_id=1)
-            self.add_obj(name="队友9", is_enemy=False, pos=[126, -1, 179], leader_objid=-1, team_id=1)
-            self.add_obj(name="队友10", is_enemy=False, pos=[127, -1, 180], leader_objid=-1, team_id=1)
+            if not self.is_5player:
+                self.add_obj(name="队友6", is_enemy=False, pos=[124, -1, 181], leader_objid=-1, team_id=1)
+                self.add_obj(name="队友7", is_enemy=False, pos=[126, -1, 181], leader_objid=-1, team_id=1)
+                self.add_obj(name="队友8", is_enemy=False, pos=[124, -1, 179], leader_objid=-1, team_id=1)
+                self.add_obj(name="队友9", is_enemy=False, pos=[126, -1, 179], leader_objid=-1, team_id=1)
+                self.add_obj(name="队友10", is_enemy=False, pos=[127, -1, 180], leader_objid=-1, team_id=1)
             #print('finish add ai')
             time.sleep(Config.sleeptime)
         self.myunits={}
@@ -282,7 +283,7 @@ class doubleBattleEnv(fc.FPSEnv):
             if len(s) > 0:
                 print('receive open')
                 d = {'Items': []}
-                str1 = get_word(self.assignment[0])
+                str1 = get_word(self.assignment[0])+'★'
                 str2 = get_word(self.assignment[1])
                 green_point1 = get_point(self.assignment[0])
                 green_point2 = get_point(self.assignment[1])
@@ -404,29 +405,32 @@ class doubleBattleEnv(fc.FPSEnv):
                 print('except')
             
         while True:
-            if len(self.server_voice.buff) > 0:
-                s = self.server_voice.buff
-                print('voice_check:', s)
-                if self.is_enemy:
-                    self.enemy_client.confirm = ''
-                else:
-                    self.client.confirm = ''
-                self.server_voice.buff = ''
-                self.add_chat(s, 0, -1)
-                for _ in range(20):
+            try:
+                if len(self.server_voice.buff) > 0:
+                    s = self.server_voice.buff
+                    print('voice_check:', s)
                     if self.is_enemy:
-                        if len(self.enemy_client.confirm) > 0:
-                            self.add_chat('语音指令确认' + s, 0, -1)
-                            analyse(s)
-                            self.enemy_client.confirm = ''
-                            break
+                        self.enemy_client.confirm = ''
                     else:
-                        if len(self.client.confirm) > 0:
-                            self.add_chat('语音指令确认' + s, 0, -1)
-                            analyse(s)
-                            self.client.confirm = ''
-                            break
-                    time.sleep(0.1)
+                        self.client.confirm = ''
+                    self.server_voice.buff = ''
+                    self.add_chat(s, 0, -1)
+                    for _ in range(20):
+                        if self.is_enemy:
+                            if len(self.enemy_client.confirm) > 0:
+                                self.add_chat('语音指令确认' + s, 0, -1)
+                                analyse(s)
+                                self.enemy_client.confirm = ''
+                                break
+                        else:
+                            if len(self.client.confirm) > 0:
+                                self.add_chat('语音指令确认' + s, 0, -1)
+                                analyse(s)
+                                self.client.confirm = ''
+                                break
+                        time.sleep(0.1)
+            except Exception as e:
+                print('voice error', e)
 
     def pushedCmdMonitor(self):
         while self.pushed_cmd_excuting_switch and not self.state['game_over']:
