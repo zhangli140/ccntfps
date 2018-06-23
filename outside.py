@@ -217,6 +217,11 @@ if __name__ == '__main__':
         dpt_argm_2 = np.argmax(dpt_prob)
         assign_p_1 = assign_sort(dpt_out[dpt_argm_1], prio)
         assign_p_2 = assign_sort(dpt_out[dpt_argm_2], prio)
+        if assign_p_1[0] == 10:
+            assign_p_1 = assign_p_2
+            dpt_prob[dpt_argm_2] = -1
+            dpt_argm_2 = np.argmax(dpt_prob)
+            assign_p_2 = assign_sort(dpt_out[dpt_argm_2], prio)
 
         env.assignment = np.array([assign_p_1, assign_p_2, env.assignment[2]])
         print(env.assignment[2])
@@ -232,7 +237,7 @@ if __name__ == '__main__':
         env.stop = False
         env.pause = False
         threading.Thread(target=agm.Assign, args=(env.assignment[0], [0, 0, 0, 0, 0])).start()
-        while (len(env.client.strategy_select) < 1 and env.stop is False) or (env.pause and env.stop):
+        while (len(env.client.strategy_select) < 1 and env.stop is False) or env.pause:
             time.sleep(1)
         print(235)
         

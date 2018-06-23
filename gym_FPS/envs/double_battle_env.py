@@ -335,7 +335,7 @@ class doubleBattleEnv(fc.FPSEnv):
                         objid_list = self.team_member[int(team_id[:-1])]
                 elif team_id[-1] == '号':
                     objid_list = [int(team_id[:-1])]
-                    if self.is_enmey: #skip bug that server idx != client idx
+                    if self.is_enemy: #skip bug that server idx != client idx
                         objid_list[0] -= 1
                 else:
                     objid_list = [int(team_id)]

@@ -194,8 +194,10 @@ class Assignment(object):
         for th in self.thread_list:
             th.setDaemon(True)
             th.start()
+        start_time = time.time()
         while self.thread_list_len > 0 and self.env.stop is False:
             #print(self.thread_list_len)
             sleep(0.1)
-            if self.thread_list_len == 0:
+            end_time = time.time()
+            if self.thread_list_len == 0 and end_time - start_time > 10:
                 self.env.stop = True
