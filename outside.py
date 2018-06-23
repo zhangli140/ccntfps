@@ -178,8 +178,8 @@ if __name__ == '__main__':
     var = 0.2
     win_rate = []
     
-    input()#等待client启动
     s, _ = env.reset()
+    input()#等待client启动
     try:
         tcpClient = socket(AF_INET, SOCK_STREAM)
         tcpClient.connect(addr)
@@ -265,7 +265,7 @@ if __name__ == '__main__':
         st='侦测到上轮敌方状态:'
         for idx in range(4,9):
             st+='%d,'%s[idx,2]
-        env.add_chat(st, 0)
+        env.add_chat(st, 0, -1)
         #编队
         temp_team = {1:[], 2:[], 3:[], 4:[]}
         outside_pos_list=[[125,-1,175],[185,-1,155],[205,-1,95],[185,-1,35],[125,-1,15],[55,-1,35],[45,-1,95],[55,-1,155]]

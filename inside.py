@@ -63,6 +63,8 @@ tcpServer = socket(AF_INET, SOCK_STREAM)
 tcpServer.bind(addr)
 tcpServer.listen(5)
 
+recv = None
+
 def wf(str, flag):
     if flag == 0:
         filepath = args.result + '/win.txt'
@@ -178,7 +180,6 @@ if __name__ == '__main__':
     var = 0.2
     win_rate = []
 
-    recv = None
     while recv != 'init':
         tcpClient, _ = tcpServer.accept()
         recv = tcpClient.recv(1024).decode(encoding="utf-8")
@@ -186,7 +187,6 @@ if __name__ == '__main__':
     
     _, s_enemy = env.reset()
     
-    recv = None
     current_step = 0
     done = False
     rewards = []
@@ -202,6 +202,13 @@ if __name__ == '__main__':
         tcpClient, _ = tcpServer.accept()
         recv = tcpClient.recv(1024).decode(encoding="utf-8")
         tcpClient.close()
+        if recv == 'NO':
+            _, s_enemy = env.decay_feature()
+            st='侦测到上轮敌方状态:'
+            for idx in range(5,9):
+                st+='%d,'%s_enemy[idx,2]
+            env.add_chat(st, 0, -1)
+
     #编队 
     temp_team = {1:[],2:[],3:[],4:[],5:[]}
     inside_pos_list =[[125,-1,95],[125,-1,135],[165,-1,95],[125,-1,55],[85,-1,95]]
