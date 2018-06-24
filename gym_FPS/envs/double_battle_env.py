@@ -170,23 +170,57 @@ class doubleBattleEnv(fc.FPSEnv):
         '''
         决定当面板打开时应该显示什么
         '''     
+        def get_name(l):
+            '''
+            战术名称
+            '''
+            #name_l = [['声东击西', '二路疑兵', '三路疑兵'], ['两路夹攻', '三面出击', '四面出击']]
+            not_zero = 0
+            max1 = 0
+            max2 = 0
+            for i in l:
+                if i:
+                    not_zero += 1
+                if i > max1:
+                    max2 = max1
+                    max1 = i
+                elif i > max2:
+                    max2 = i
+            if not_zero == 1:
+                return '孤注一掷'
+            if not_zero == 2:
+                if max1 > 6:
+                    return '声东击西'
+                else:
+                    return '两路夹攻'
+            if not_zero == 3:
+                if max1 - max2 > 2:
+                    return '二路疑兵'
+                else:
+                    return '三面出击'
+            if not_zero == 4:
+                if max2 > 2:
+                    return '四面出击'
+                else:
+                    return '三路疑兵'
+        
         def get_word(l):
             '''
             根据分兵策略生成战术面板文字
             '''
             res = []
-            words = ['北门 ', '东门 ', '南门 ', '西门 ', '驻守中心 ']
+            words = ['北', '东', '南', '西', '中']
             for i, num in enumerate(l):
                 if num > 0:
                     res.append(words[i] + str(int(num)))
-            return ','.join(res)
+            return get_name(l) + ':' + ','.join(res)
 
         def get_point(l):
             '''
             根据分兵策略生成战术面板提示绿点
             '''
             if self.is_enemy:
-                point_list = [ [125, -1, 95], [125, -1, 135],[165, -1, 95], [125, -1, 55], [85, -1, 95]]
+                point_list = [[125, -1, 95], [125, -1, 135], [165, -1, 95], [125, -1, 55], [85, -1, 95]]
             else:
                 point_list = [[125, -1, 175], [205, -1, 95], [125, -1, 15], [45, -1, 95]]
             res = []
@@ -258,7 +292,7 @@ class doubleBattleEnv(fc.FPSEnv):
                 for playerid,state in curfeaturepos.items():
                     if playerid in enemyteam:
                         temp=state["POSITION"]
-                        curpos=[temp[0],temp[2]]
+                        curpos=[temp[0], temp[2]]
                         index=getpos(curpos)
                         if index>0:
                             curenemylist[index-5]+=1
@@ -283,7 +317,7 @@ class doubleBattleEnv(fc.FPSEnv):
             if len(s) > 0:
                 print('receive open')
                 d = {'Items': []}
-                str1 = get_word(self.assignment[0])+'★'
+                str1 = '★ ' + get_word(self.assignment[0])
                 str2 = get_word(self.assignment[1])
                 green_point1 = get_point(self.assignment[0])
                 green_point2 = get_point(self.assignment[1])

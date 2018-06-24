@@ -1,8 +1,8 @@
 [fps]
 speed=1
 frame_skip=9
-serverip=210.32.155.16
-clientip=183.129.170.182
+serverip=192.168.1.103
+clientip=192.168.1.101
 serverport=5130
 sleeptime=3
 max_dist=100
