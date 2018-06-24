@@ -12,6 +12,8 @@ from queue import deque
 import copy
 import threading
 import sys, random
+from sklearn.svm import SVC
+from sklearn.externals import joblib
 
 DISTANCE_FACTOR = 16
 ENEMY = 1
@@ -52,6 +54,7 @@ class doubleBattleEnv(fc.FPSEnv):
         self.pushed_cmd_excuting_switch = True
 
         self.init_coords = None
+        self.clf = joblib.load('./trainmodel/train_model.m')
 
 
     def _action_space(self):
@@ -117,9 +120,8 @@ class doubleBattleEnv(fc.FPSEnv):
         self.state['win'] = False
         self.pushed_cmd_excuting = dict()
         #print("while1")
-        time.sleep(10)
 
-        if not self.is_enemy:
+        if not self.is_enemy and self.file_name != '5vs1':
             time.sleep(10)
             if not self.is_5player:
                 self.add_obj(name="敌人1", is_enemy=True, pos=[125, -1, 100], leader_objid=-1, team_id=-1)
@@ -146,8 +148,14 @@ class doubleBattleEnv(fc.FPSEnv):
                 self.add_obj(name="队友8", is_enemy=False, pos=[124, -1, 179], leader_objid=-1, team_id=1)
                 self.add_obj(name="队友9", is_enemy=False, pos=[126, -1, 179], leader_objid=-1, team_id=1)
                 self.add_obj(name="队友10", is_enemy=False, pos=[127, -1, 180], leader_objid=-1, team_id=1)
-            #print('finish add ai')
-            time.sleep(Config.sleeptime)
+        elif self.file_name == '5vs1':
+            time.sleep(10)
+            self.add_obj(name="队友1", is_enemy=False, pos=[125, -1, 100], leader_objid=-1, team_id=1)
+            self.add_obj(name="队友2", is_enemy=False, pos=[125, -1, 101], leader_objid=-1, team_id=1)
+            self.add_obj(name="队友3", is_enemy=False, pos=[125, -1, 99],  leader_objid=-1, team_id=1)
+            self.add_obj(name="队友4", is_enemy=False, pos=[124, -1, 100], leader_objid=-1, team_id=1)
+            self.add_obj(name="队友5", is_enemy=False, pos=[126, -1, 100], leader_objid=-1, team_id=1)
+        #print('finish add ai')        
         self.myunits={}
         self._make_feature()
         #self.screen_my, self.screen_enemy = self._make_observation()
@@ -171,39 +179,72 @@ class doubleBattleEnv(fc.FPSEnv):
         决定当面板打开时应该显示什么
         '''     
         def get_name(l):
-            '''
-            战术名称
-            '''
-            #name_l = [['声东击西', '二路疑兵', '三路疑兵'], ['两路夹攻', '三面出击', '四面出击']]
-            not_zero = 0
-            max1 = 0
-            max2 = 0
-            for i in l:
-                if i:
-                    not_zero += 1
-                if i > max1:
-                    max2 = max1
-                    max1 = i
-                elif i > max2:
-                    max2 = i
-            if not_zero == 1:
-                return '孤注一掷'
-            if not_zero == 2:
-                if max1 > 6:
-                    return '声东击西'
-                else:
-                    return '两路夹攻'
-            if not_zero == 3:
-                if max1 - max2 > 2:
-                    return '二路疑兵'
-                else:
-                    return '三面出击'
-            if not_zero == 4:
-                if max2 > 2:
-                    return '四面出击'
-                else:
-                    return '三路疑兵'
-        
+            if self.file_name != '5vs1':
+                #name_l = [['声东击西', '二路疑兵', '三路疑兵'], ['两路夹攻', '三面出击', '四面出击']]
+                ll = l.copy()
+                if np.sum(l) == 5:
+                    ll = l * 2
+                not_zero = 0
+                max1 = 0
+                max2 = 0
+                for i in ll:
+                    if i:
+                        not_zero += 1
+                    if i > max1:
+                        max2 = max1
+                        max1 = i
+                    elif i > max2:
+                        max2 = i
+                if not_zero == 1:
+                    return '孤注一掷'
+                if not_zero == 2:
+                    if max1 > 6:
+                        return '声东击西'
+                    else:
+                        return '两路夹攻'
+                if not_zero == 3:
+                    if max1 - max2 > 2:
+                        return '二路疑兵'
+                    else:
+                        return '三面出击'
+                if not_zero == 4:
+                    if max2 > 2:
+                        return '四面出击'
+                    else:
+                        return '三路疑兵'
+            else:
+                if np.sum(l) != 5:
+                    return '总人数不为5！'
+                door_man_count = 0
+                for i in range(4):
+                    if l[i] != 0:
+                        door_man_count += 1
+                if door_man_count == 4:
+                    return '严阵以待'
+                elif door_man_count == 3:
+                    return '三路据守'
+                elif door_man_count == 2:
+                    if l[4] >= 2:
+                        return '两路诱敌'
+                    else:
+                        sol = []
+                        for i in range(4):
+                            if l[i] != 0:
+                                sol.append(l[i])
+                        if np.abs(sol[0] - sol[1]) <= 1:
+                            return '两路据守'
+                        else:
+                            return '诱敌埋伏'
+                elif door_man_count == 1:
+                    if l[4] == 0:
+                        return '集合埋伏'
+                    elif l[4] <= 2:
+                        return '埋伏打援'
+                    else:
+                        return '诱敌深入'
+                else：
+                    return '据守中心'
+
         def get_word(l):
             '''
             根据分兵策略生成战术面板文字
@@ -220,7 +261,7 @@ class doubleBattleEnv(fc.FPSEnv):
             根据分兵策略生成战术面板提示绿点
             '''
             if self.is_enemy:
-                point_list = [[125, -1, 95], [125, -1, 135], [165, -1, 95], [125, -1, 55], [85, -1, 95]]
+                point_list = [ [125, -1, 95], [125, -1, 135],[165, -1, 95], [125, -1, 55], [85, -1, 95]]
             else:
                 point_list = [[125, -1, 175], [205, -1, 95], [125, -1, 15], [45, -1, 95]]
             res = []
@@ -292,7 +333,7 @@ class doubleBattleEnv(fc.FPSEnv):
                 for playerid,state in curfeaturepos.items():
                     if playerid in enemyteam:
                         temp=state["POSITION"]
-                        curpos=[temp[0], temp[2]]
+                        curpos=[temp[0],temp[2]]
                         index=getpos(curpos)
                         if index>0:
                             curenemylist[index-5]+=1
@@ -317,11 +358,11 @@ class doubleBattleEnv(fc.FPSEnv):
             if len(s) > 0:
                 print('receive open')
                 d = {'Items': []}
-                str1 = '★ ' + get_word(self.assignment[0])
+                str1 = get_word(self.assignment[0])+'★'
                 str2 = get_word(self.assignment[1])
                 green_point1 = get_point(self.assignment[0])
                 green_point2 = get_point(self.assignment[1])
-                if not self.is_enemy:
+                if self.file_name != '5vs1':
                     print(outer())
                     res_xx = outer()
                     self.assignment[2] = res_xx
@@ -335,7 +376,7 @@ class doubleBattleEnv(fc.FPSEnv):
                     for _, ut in self.states.items():
                         if (ut['TEAM_ID'] < 0 and self.is_enemy) or (ut['TEAM_ID'] > 0 and not self.is_enemy):
                             c_pos_list.append(ut['POSITION'])
-                    self.add_strategy('驻守', ['原地防御'], [c_pos_list], d)
+                    self.add_strategy('进攻', ['主动出击'], [[[125,-1,175],[205,-1,95],[125,-1,15],[45,-1,95]]], d)
                 self.open_strategy_panel(d)
 
                 self.client.strategy_open=''

@@ -10,8 +10,6 @@ from ..utils import *
 from ..client import Client
 from ..server_voice import Server
 from .starcraft import Config
-from sklearn.svm import SVC
-from sklearn.externals import joblib
 
 
 class FPSEnv(gym.Env):
@@ -25,8 +23,6 @@ class FPSEnv(gym.Env):
             time.sleep(CONFIG.wait_for_game_start)
         except:
             print('自动打开失败')
-
-        self.clf = joblib.load('./trainmodel/train_model.m')
 
     def _step(self, action):
         raise NotImplementedError
@@ -67,7 +63,7 @@ class FPSEnv(gym.Env):
         pass
 
     def set_env(self, SEVERIP='127.0.0.1', SERVERPORT=5123, socket_DEBUG=False, env_DEBUG=False, speedup=1,
-                is_enemy=False, is_5player=False):
+                is_enemy=False, is_5player=False, file_name=None):
         '''
         配置env
         '''
@@ -102,15 +98,16 @@ class FPSEnv(gym.Env):
         self.path_id = 0
         self.cube_id = 0
         self.episode_id = 1
-        if is_enemy:
-            self.assignment = np.zeros((3, 5), dtype=np.int32)
-        else:
+       if file_name != '5vs1':
             self.assignment = np.zeros((3, 4), dtype=np.int32)
+        else:
+            self.assignment = np.zeros((2, 5), dtype=np.int32)
         self.cpos_list1 = []
         self.cpos_list2 = []
 		
         self.cmdThreadsLen = 0
         self.support_list = dict()
+        self.file_name = file_name
 		
         if self.thread_flag:
             self.thread_flag = False
