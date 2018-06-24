@@ -48,7 +48,7 @@ if __name__ == '__main__':
     env = gym.make('FPSDouble-v0')
     print("begin init env....")
     env.set_env(CONFIG.serverip, 5123, socket_DEBUG=False, env_DEBUG=False, speedup=CONFIG.speed, is_enemy=False, file_name='5vs1')
-    point_list = [ [125, -1, 95], [125, -1, 135],[165, -1, 95], [125, -1, 55], [85, -1, 95]]
+    point_list = [[125, -1, 95], [125, -1, 135], [165, -1, 95], [125, -1, 55], [85, -1, 95]]
 
     permutation_outside = list(permutations([0, 1, 2, 3]))
     permutation_inside = list(permutations([0, 1, 2, 3, 4]))
