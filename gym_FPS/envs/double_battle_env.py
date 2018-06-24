@@ -155,6 +155,7 @@ class doubleBattleEnv(fc.FPSEnv):
             self.add_obj(name="队友3", is_enemy=False, pos=[125, -1, 99],  leader_objid=-1, team_id=1)
             self.add_obj(name="队友4", is_enemy=False, pos=[124, -1, 100], leader_objid=-1, team_id=1)
             self.add_obj(name="队友5", is_enemy=False, pos=[126, -1, 100], leader_objid=-1, team_id=1)
+        time.sleep(Config.sleeptime)
         #print('finish add ai')        
         self.myunits={}
         self._make_feature()
@@ -242,7 +243,7 @@ class doubleBattleEnv(fc.FPSEnv):
                         return '埋伏打援'
                     else:
                         return '诱敌深入'
-                else：
+                else:
                     return '据守中心'
 
         def get_word(l):
@@ -260,7 +261,7 @@ class doubleBattleEnv(fc.FPSEnv):
             '''
             根据分兵策略生成战术面板提示绿点
             '''
-            if self.is_enemy:
+            if self.file_name  == '5vs1':
                 point_list = [ [125, -1, 95], [125, -1, 135],[165, -1, 95], [125, -1, 55], [85, -1, 95]]
             else:
                 point_list = [[125, -1, 175], [205, -1, 95], [125, -1, 15], [45, -1, 95]]
@@ -455,10 +456,10 @@ class doubleBattleEnv(fc.FPSEnv):
 
         def analyse(s):
             try:
-                if s=='重算':
+                if s=='行动':
                     self.stop=True
                     self.pause=False
-                elif s=='暂停':
+                elif s=='待命':
                     self.stop=True
                     self.pause=True                    
                 elif s.find('方案') > -1:

@@ -75,7 +75,8 @@ class Assignment(object):
                 self.outside_action[obj_pos] -= 1
 
     def inside_agent_choose(self, obj_pos):
-        
+        #print('obj_pos:',obj_pos)
+        #print('in_s:',self.inside_state)
         inside_choose_rank = []
         if obj_pos == 0:
             inside_choose_rank = [5, 1, 2, 3, 4]
@@ -195,9 +196,9 @@ class Assignment(object):
             th.setDaemon(True)
             th.start()
         start_time = time.time()
-        while self.thread_list_len > 0 and self.env.stop is False:
+        while self.env.stop is False:
             #print(self.thread_list_len)
             sleep(0.1)
             end_time = time.time()
-            if self.thread_list_len == 0 and end_time - start_time > 10:
+            if self.thread_list_len <= 0 and end_time - start_time > 10:
                 self.env.stop = True

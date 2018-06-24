@@ -98,7 +98,7 @@ class FPSEnv(gym.Env):
         self.path_id = 0
         self.cube_id = 0
         self.episode_id = 1
-       if file_name != '5vs1':
+        if file_name != '5vs1':
             self.assignment = np.zeros((3, 4), dtype=np.int32)
         else:
             self.assignment = np.zeros((2, 5), dtype=np.int32)
