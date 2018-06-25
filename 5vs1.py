@@ -208,18 +208,22 @@ if __name__ == '__main__':
 
         env.stop = False
         env.pause = False
-        print('assignment0:',env.assignment[0])
-        threading.Thread(target=agm.Assign, args=([0, 0, 0, 0], env.assignment[0])).start()
+        print('assignment0:',assign_p_e_1)
+        agm.Assign([0, 0, 0, 0], assign_p_e_1)
         #print('finish assignment')
-        while (len(env.client.strategy_select) < 1 and env.stop is False) or env.pause:
-            time.sleep(1)
-        env.stop = True
+        
+        print('216:', env.client.strategy_select)
+        #env.stop = True
+        #while agm.thread_list_len > 0:
+        #    time.sleep(0.1)
+        #print ('220:',agm.thread_list_len)
         if len(env.client.strategy_select):
             if env.client.strategy_select[0] == '0':
                 cp = env.assignment[int(env.client.strategy_select[2])]
                 copyagn = [cp[4], cp[0], cp[1], cp[2], cp[3]]
                 print(copyagn)
-                env.stop = False
+                #env.stop = False
+                env.client.strategy_select = ''
                 agm.Assign([0, 0, 0, 0], copyagn)
             else:
                 fight = True

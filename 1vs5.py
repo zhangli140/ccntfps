@@ -185,11 +185,11 @@ if __name__ == '__main__':
     reward = 0
     cumulative_reward = 0
     fight = False
-    cant_f = 0
+    #cant_f = 0
     print("finish reset env!")
     
     while not fight:
-        cant_f += 1
+        #cant_f += 1
         # formation algorithm
         prio_prob = Priority.calc_priority(s)
         prio_argm = np.argmax(prio_prob)
@@ -239,10 +239,10 @@ if __name__ == '__main__':
             fight = np.argmax(fight_prob)
             if np.random.uniform(0, 1) < 0.05:
                 fight = np.random.randint(0, 2)
-            if cant_f == 1:
-                fight = False
-            elif cant_f > 3:
-                fight = True
+            #if cant_f == 1:
+            #    fight = False
+            #elif cant_f > 3:
+            #    fight = True
 
 
         s = s_

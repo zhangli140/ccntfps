@@ -23,15 +23,16 @@ class Assignment(object):
 
     def inside_move_thread(self, uid, obj_pos):
         #print('inside_thread:', uid)
-        st = time.time()
-        ed = time.time()
+        #st = time.time()
+        #ed = time.time()
         self.env.move(inside_pos_list[obj_pos],[uid], walkType='run')
-        while get_distance(inside_pos_list[obj_pos][0], inside_pos_list[obj_pos][2], self.inside_current_pos[uid][0],
-                           self.inside_current_pos[uid][1]) > 6 and ed - st < 180:
-            sleep(0.1)
-            ed = time.time()
+        #while get_distance(inside_pos_list[obj_pos][0], inside_pos_list[obj_pos][2], self.inside_current_pos[uid][0],
+        #                   self.inside_current_pos[uid][1]) > 6 and ed - st < 50 and st > self.sst:
+        #    sleep(0.1)
+        #    ed = time.time()
         #print('in(id,pos):', uid, obj_pos)
-        self.thread_list_len -= 1
+        #if st > self.sst:
+        #    self.thread_list_len -= 1
 
 
     def inside_agent_choose(self, obj_pos):
@@ -45,8 +46,7 @@ class Assignment(object):
         for point in inside_choose_rank:
             while len(self.inside_state[point]) > 0 and self.inside_action[obj_pos] > 0:
                 self.env.sup_inside[obj_pos].append(self.inside_state[point][-1:])
-
-                self.thread_list.append(threading.Thread(target=self.inside_move_thread, args=(self.inside_state[point].pop(), obj_pos)))
+                self.inside_move_thread(self.inside_state[point].pop(), obj_pos)
                 self.inside_action[obj_pos] -= 1
  
     def make_state(self):
@@ -67,7 +67,7 @@ class Assignment(object):
                 self.inside_state[4].append(uid)
             else:
                 self.inside_state[5].append(uid)
-
+    """
     def current_pos_thread(self):
 
         self.inside_current_pos = {}
@@ -77,11 +77,12 @@ class Assignment(object):
             for uid, ut in self.env.state['units_myself'].items():
                 self.inside_current_pos[uid] = [ut['POSITION'][0], ut['POSITION'][2]]
             sleep(0.1)
-
+    """
     def Assign(self, outside_a, inside_a):
+        #self.sst = time.time()
         self.env.stop = False
         self.inside_action = deepcopy(inside_a)
-        self.thread_list = []
+        #self.thread_list = []
         self.make_state()
         #print('os: ',self.outside_state)
         #print('is: ', self.inside_statse)
@@ -98,22 +99,30 @@ class Assignment(object):
             if self.inside_action[idx]>0:
                 self.inside_agent_choose(idx)
         
-        self.thread_list_len = len(self.thread_list)
+        #self.thread_list_len = len(self.thread_list)
         #print('tl: ', self.thread_list_len)
         #current_pos_thread
-        thread_env = threading.Thread(target=self.current_pos_thread)
-        thread_env.setDaemon(True)
-        thread_env.start()
-        sleep(0.1)
+        #thread_env = threading.Thread(target=self.current_pos_thread)
+        #thread_env.setDaemon(True)
+        #thread_env.start()
+        cnt = 0
+        print('cnt:', cnt)
+        print(len(self.env.client.strategy_select), self.env.stop, self.env.pause)
+        while ((len(self.env.client.strategy_select) < 1 and self.env.stop is False) or self.env.pause) and cnt < 7:
+            time.sleep(1)
+            cnt += 1
+        print('exit',cnt)
+        #sleep(10)
+        self.env.stop = True
         #Multi-Thread
-        for th in self.thread_list:
-            th.setDaemon(True)
-            th.start()
-        start_time = time.time()
-        while self.env.stop is False:
+        ##for th in self.thread_list:
+        #    th.setDaemon(True)
+        #    th.start()
+        #start_time = time.time()
+        #while self.env.stop is False:
             #print(self.thread_list_len)
-            sleep(0.1)
-            end_time = time.time()
+            #sleep(0.1)
+            #end_time = time.time()
             #print('time:',self.thread_list_len)
-            if self.thread_list_len <= 0 and end_time - start_time > 5:
-                self.env.stop = True
+            #if (self.thread_list_len <= 0 and end_time - start_time > 5) or (end_time - start_time > 10):
+                #self.env.stop = True
